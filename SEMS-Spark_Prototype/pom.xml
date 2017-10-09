@@ -16,4 +16,31 @@
       </plugin>
     </plugins>
   </build>
+  <dependencies>
+  	<dependency>
+  		<groupId>com.github.scopt</groupId>
+  		<artifactId>scopt_2.11</artifactId>
+  		<version>3.5.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.12</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.spark</groupId>
+  		<artifactId>spark-core_2.11</artifactId>
+  		<version>2.1.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.spark</groupId>
+  		<artifactId>spark-sql_2.11</artifactId>
+  		<version>2.1.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.scalanlp</groupId>
+  		<artifactId>breeze_2.11</artifactId>
+  		<version>0.13</version>
+  	</dependency>
+  </dependencies>
 </project>
