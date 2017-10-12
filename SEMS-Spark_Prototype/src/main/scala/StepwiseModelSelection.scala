@@ -3,7 +3,8 @@ import scopt._
 import prototype._
 import org.apache.spark.sql.SparkSession
 
-case class InputConfig(genotypeInput: String = ".",
+case class InputConfig(sparkMaster: String = "",
+                       genotypeInput: String = ".",
                        phenotypeInput: String = ".",
                        output: String = ".",
                        forwardThres: Double = 0.05,
@@ -16,7 +17,12 @@ object StepwiseModelSelection {
     head("StepwiseModelSelection")
 
     note("Required Arguments\n------------------")
-      
+    
+    opt[String]("spark-master")
+      .required
+      .valueName("string>")
+      .action( (x, c) => c.copy(sparkMaster = x) )
+    
     opt[String]('G', "genotypeInput")
       .required
       .valueName("<file>")
@@ -64,8 +70,12 @@ object StepwiseModelSelection {
       // If there is a valid set of arguments presented
       case Some(config) => {
 
-        val spark = SparkSession.builder.appName("SEMS").getOrCreate()
-        //val spark = SparkSession.builder.appName("SEMS").master("local").getOrCreate()
+        val spark = SparkSession
+                      .builder
+                      .appName("SEMS")
+                      .master(parsed.get.sparkMaster)
+                      .getOrCreate()
+                      
         //spark.sparkContext.setLogLevel("WARN")
         
         RDDPrototype.performSEMS(spark,
