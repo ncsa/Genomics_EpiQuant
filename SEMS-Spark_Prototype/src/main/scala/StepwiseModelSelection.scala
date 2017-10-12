@@ -39,18 +39,18 @@ object StepwiseModelSelection {
 
     opt[Double]("forwardThreshold")
       .optional
-      .valueName("<file>")
+      .valueName("<number>")
       .action( (x, c) => c.copy(forwardThres = x) )
       .text("The p-value threshold for the forward step")
     
     opt[Double]("backwardThreshold")
       .optional
-      .valueName("<file>")
+      .valueName("<number>")
       .action( (x, c) => c.copy(backwardThres = x) )
       .text("The p-value threshold for the backward step")
   }
   
-  def main(args: Array[String]) {
+  def launch(args: Array[String]) {
     
     val parsed = argParser.parse(args, InputConfig())
       

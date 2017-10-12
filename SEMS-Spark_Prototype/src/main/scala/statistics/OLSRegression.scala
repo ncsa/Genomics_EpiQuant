@@ -1,6 +1,6 @@
 package statistics
 
-import breeze.linalg.inv
+import breeze.linalg.pinv
 import breeze.linalg.DenseVector
 import breeze.linalg.DenseMatrix
 import breeze.linalg.diag
@@ -32,7 +32,11 @@ class OLSRegression(val xColumnNames: Array[String],
 
   private[this] val transposedX = XsWithZeroColumn.t
   
-  private[this] val inverseOfXtimesXt = inv(transposedX * XsWithZeroColumn)
+  /* Changed to use pseudoinverse, as Ellen said it will solve the SinglarMatrixException problem
+   *   And all of the jUnit tests still passed, suggesting that the answers are still comparable to R's
+   */
+  //private[this] val inverseOfXtimesXt = inv(transposedX * XsWithZeroColumn)
+  private[this] val inverseOfXtimesXt = pinv(transposedX * XsWithZeroColumn)
 
   /** The estimates of the coefficients; the last entry is the estimate of the intercept */
   val coefficients = (inverseOfXtimesXt * transposedX * yAsBreezeVector).toArray

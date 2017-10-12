@@ -2,7 +2,8 @@ import scopt._
 import java.io.File
 import converters._
 
-case class Config(input: File = new File("."), output: File = new File("."),
+case class Config(input: File = new File("."),
+                  output: File = new File("."),
                   inputType: String = "Custom",
                   deleteColumns: Seq[Int] = Seq(),
                   transpose: Boolean = false,
@@ -24,13 +25,13 @@ object ConvertFormat {
       .required
       .valueName("<file>")
       .action( (x, c) => c.copy(input = x) )
-      .text("Path to the file to convert")
+      .text("Path of the file to convert")
         
     opt[File]('o', "output")
       .required
       .valueName("<file>")
       .action( (x, c) => c.copy(output = x) )
-      .text("Path to where the output file will be placed")
+      .text("Path where the output file will be placed")
         
     opt[String]("inputType")
       .required
@@ -69,7 +70,7 @@ object ConvertFormat {
       .action( (x, c) => c.copy(deleteColumns = x) )
   }
 
-  def main(args: Array[String]) = { 
+  def launch(args: Array[String]) = { 
     
     val parsed = argParser.parse(args, Config())
     
