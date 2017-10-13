@@ -54,12 +54,13 @@ class OLSRegression(val xColumnNames: Array[String],
   
   val residualStandardError = math.sqrt( (sumOfSquared(residuals) / degreesOfFreedom) )
   
-  private[this] def replaceNaN(x: Double) = { if (x.isNaN) Double.MinPositiveValue else x }
+  // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values 
+  private[this] def replaceZero(x: Double) = { if (x == 0.0) 0.000001 else x }
   
   /** Standard error for each coefficient; the final entry is for the intercept */
-  val standardErrors = {  
+  val standardErrors = {
     val initial = diag(inverseOfXtimesXt).toArray.map(math.sqrt(_) * residualStandardError)
-    val filtered = initial.map(replaceNaN)
+    val filtered = initial.map(replaceZero)
     filtered
   }
   
