@@ -55,7 +55,6 @@ class RDDPrototypeTest {
                                         broadcastYTable,
                                         "pheno",
                                         initial_collection,
-                                        0.05,
                                         0.05                                     
                                        )                                     
                                        
@@ -118,7 +117,6 @@ class RDDPrototypeTest {
                                         broadcastYTable,
                                         "pheno",
                                         initial_collection,
-                                        0.05,
                                         0.05
                                        )
     
@@ -170,7 +168,6 @@ class RDDPrototypeTest {
                                         broadcastYTable,
                                         "pheno",
                                         initial_collection,
-                                        0.05,
                                         0.05
                                        )
     

@@ -4,11 +4,11 @@ import prototype._
 import org.apache.spark.sql.SparkSession
 
 case class InputConfig(sparkMaster: String = "",
+                       sparkLog: String = "INFO",
                        genotypeInput: String = ".",
                        phenotypeInput: String = ".",
                        output: String = ".",
-                       forwardThres: Double = 0.05,
-                       backwardThres: Double = 0.05
+                       threshold: Double = 0.05
                       )
 
 object StepwiseModelSelection {
@@ -20,7 +20,7 @@ object StepwiseModelSelection {
     
     opt[String]("spark-master")
       .required
-      .valueName("string>")
+      .valueName("<string>")
       .action( (x, c) => c.copy(sparkMaster = x) )
     
     opt[String]('G', "genotypeInput")
@@ -43,17 +43,18 @@ object StepwiseModelSelection {
       
     note("\nOptional Arguments\n------------------")
 
-    opt[Double]("forwardThreshold")
+    opt[Double]("threshold")
       .optional
       .valueName("<number>")
-      .action( (x, c) => c.copy(forwardThres = x) )
-      .text("The p-value threshold for the forward step")
-    
-    opt[Double]("backwardThreshold")
+      .action( (x, c) => c.copy(threshold = x) )
+      .text("The p-value threshold for the backward and forward steps: Defaults to 0.05")
+      
+    opt[String]("spark-log-level")
       .optional
-      .valueName("<number>")
-      .action( (x, c) => c.copy(backwardThres = x) )
-      .text("The p-value threshold for the backward step")
+      .valueName("WARN, INFO, DEBUG, etc.")
+      .action( (x, c) => c.copy(sparkLog = x) )
+      .text("Set sparks log verbosity: Defaults to INFO")
+
   }
   
   def launch(args: Array[String]) {
@@ -76,14 +77,13 @@ object StepwiseModelSelection {
                       .master(parsed.get.sparkMaster)
                       .getOrCreate()
                       
-        //spark.sparkContext.setLogLevel("WARN")
+        spark.sparkContext.setLogLevel(parsed.get.sparkLog)
         
         RDDPrototype.performSEMS(spark,
                                  parsed.get.genotypeInput,
                                  parsed.get.phenotypeInput,
                                  parsed.get.output,
-                                 parsed.get.forwardThres,
-                                 parsed.get.backwardThres
+                                 parsed.get.threshold
                                 )
       }
     }  

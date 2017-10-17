@@ -10,13 +10,8 @@ import converters.Table
 import java.io.File
 
 /*
- * 
- * 
  * Having a different threshold for the forward and backward steps can lead to oscillations
  *   where an X is included under high p-value, then skipped, then included again, ... and this goes on forever 
- * 
- * 
- * 
  */
 
 
@@ -83,13 +78,15 @@ object RDDPrototype {
                    broadcastPhenotypes: Broadcast[Map[String, Vector[Double]]],
                    phenotypeName: String,
                    collections: StepCollections,
-                   forwardThres: Double,
-                   backwardThres: Double,
+                   threshold: Double,
                    prev_best_model: OLSRegression = null,
                    iterations: Int = 1
                   ): OLSRegression = {
+    
     println("Iteration number: " + iterations.toString)
 
+    //if (prev_best_model != null) prev_best_model.printSummary
+    
     /*
      *  LOCAL FUNCTIONS
      */
@@ -173,14 +170,17 @@ object RDDPrototype {
     val mappedValues: rdd.RDD[Option[OLSRegression]] = snpDataRDD.map(mapFunction(_, addedPrevBroadcast))
     val bestRegression: OLSRegression = reduceFunction(mappedValues)
 
+    bestRegression.printSummary
+    collections.skipped.foreach(x => print(x + ", "))
+
     // If the p-value of the newest term does not meet the threshold, return the prev_best_model
-    if (getNewestTermsPValue(bestRegression) >= forwardThres) {
+    if (getNewestTermsPValue(bestRegression) >= threshold) {
       if (prev_best_model != null) { return prev_best_model }
       else {
         addedPrevBroadcast.destroy()
-        throw new Exception("No terms could be added to the model at a cutoff of " + forwardThres)
+        throw new Exception("No terms could be added to the model at a cutoff of " + threshold)
       }
-    } 
+    }
     else {
       val new_collections = collections.copy()
 
@@ -202,15 +202,21 @@ object RDDPrototype {
        * 				 If they are, remove them from consideration in the next round (put them in skipped) and
        *         take them out of the model
        */
+      
       val namePValuePairs = bestRegression.xColumnNames.zip(bestRegression.pValues)
-      namePValuePairs.foreach(pair => {
-        if (pair._2 >= backwardThres) {
+      
+      val entriesSkippedThisRound = namePValuePairs.map(pair => {
+        if (pair._2 >= threshold) {
           // Remove this term from the prev_added collection, and move it to the skipped category
           new_collections.added_prev.remove(pair._1)
           new_collections.skipped.add(pair._1)
+          
+          // Add the name to the entriesSkippedThisRound variable so that at the end, this can be removed
+          // from the BestRegression that is passed to the next iteration
+          pair._1
         }
       })
-
+      
       if (new_collections.not_added.size == 0) {
         /*
          * No more terms that could be added. Return the current best model, unless there are entries
@@ -224,7 +230,7 @@ object RDDPrototype {
          */
         if (new_collections.skipped.size == 0) {return bestRegression}
         else {
-
+          
           val newestXColName = bestRegression.xColumnNames.last
           val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
 
@@ -240,9 +246,36 @@ object RDDPrototype {
           return new OLSRegression(xColNames, phenotypeName, xVals, yVals)
         }
       } else {
-        addedPrevBroadcast.destroy()
+        
+        /*
+         * If any entries were skipped this round, recompute the regression without these terms,
+         *  and then include the new best regression in the next iteration
+         */
+        val newBestRegression = {
+          if (entriesSkippedThisRound.length != 0) {
+            val newestXColName = bestRegression.xColumnNames.last
+            val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
+          
+            val nameInSkipped: (String => Boolean) = entriesSkippedThisRound.contains(_)
+          
+            val significantXColNames = otherXColNames.filterNot(nameInSkipped(_))
+            // New x values: look up the previously added from the broadcast table, then include the values of
+            //   the latest term to be added
+            val xVals = significantXColNames.map(addedPrevBroadcast.value(_)).toVector :+ bestRegression.lastXColumnsValues
+            val yVals = broadcastPhenotypes.value(phenotypeName)
+            val xColNames = newestXColName +: otherXColNames
+          
+            new OLSRegression(xColNames, phenotypeName, xVals, yVals)
+          }
+          else {
+            bestRegression
+          }
+        }
+        
+        addedPrevBroadcast.destroy() 
+        
         performSteps(spark, snpDataRDD, broadcastPhenotypes, phenotypeName,
-                     new_collections, forwardThres, backwardThres, bestRegression, iterations + 1
+                     new_collections, threshold, newBestRegression, iterations + 1
                     )
       }
     }
@@ -263,9 +296,10 @@ object RDDPrototype {
   }
   
   def performSEMS(spark: SparkSession,
-                  genotypeFile: String, phenotypeFile: String,
+                  genotypeFile: String,
+                  phenotypeFile: String,
                   outputFileDirectory: String,
-                  forwardThres: Double, backwardThres: Double
+                  threshold: Double
                  ) {
 
     val totalStartTime = System.nanoTime()
@@ -305,7 +339,7 @@ object RDDPrototype {
       val startTime = System.nanoTime()
       
       val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast,
-                                 phenotype, initialCollections, forwardThres, backwardThres
+                                 phenotype, initialCollections, threshold
                                 )      
       val endTime = System.nanoTime()
 

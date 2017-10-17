@@ -14,10 +14,10 @@ class OLSRegression(val xColumnNames: Array[String],
   // Good summary of formula's used
   // http://www.stat.ucla.edu/~nchristo/introeconometrics/introecon_matrixform.pdf
 
-  private[this] val yAsBreezeVector = DenseVector(Y.toArray)
+  private val yAsBreezeVector = DenseVector(Y.toArray)
   
   // To estimate the intercept, a column of 1's is added to the matrix in the last position
-  private[this] val XsWithZeroColumn = {
+  private val XsWithZeroColumn = {
     val numRows = Y.size
     val numCols = Xs.transpose.apply(0).size
     val ones = List.fill(numRows)(1.0)
@@ -25,18 +25,18 @@ class OLSRegression(val xColumnNames: Array[String],
   }  
   
   val N = Y.size
-  private[this] val k = XsWithZeroColumn.cols
+  private val k = XsWithZeroColumn.cols
 
   // N - k (k is the number of estimations; this assumes that there is a 1's column for the intercept)
   val degreesOfFreedom = N - k
 
-  private[this] val transposedX = XsWithZeroColumn.t
+  private val transposedX = XsWithZeroColumn.t
   
   /* Changed to use pseudoinverse, as Ellen said it will solve the SinglarMatrixException problem
    *   And all of the jUnit tests still passed, suggesting that the answers are still comparable to R's
    */
-  //private[this] val inverseOfXtimesXt = inv(transposedX * XsWithZeroColumn)
-  private[this] val inverseOfXtimesXt = pinv(transposedX * XsWithZeroColumn)
+  //private val inverseOfXtimesXt = inv(transposedX * XsWithZeroColumn)
+  private val inverseOfXtimesXt = pinv(transposedX * XsWithZeroColumn)
 
   /** The estimates of the coefficients; the last entry is the estimate of the intercept */
   val coefficients = (inverseOfXtimesXt * transposedX * yAsBreezeVector).toArray
@@ -54,27 +54,31 @@ class OLSRegression(val xColumnNames: Array[String],
   
   val residualStandardError = math.sqrt( (sumOfSquared(residuals) / degreesOfFreedom) )
   
-  // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values 
-  private[this] def replaceZero(x: Double) = { if (x == 0.0) 0.000001 else x }
+  // Need to filter out both cases where the Std.Err itself is NaN and when it is exactly zero
+  
+  // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values
+ // private val replaceNaN: Double => Double = x => if (x.isNaN()) Double.PositiveInfinity else x
+  private val replaceZero: Double => Double = x => if (x == 0.0) 0.000001 else x
   
   /** Standard error for each coefficient; the final entry is for the intercept */
   val standardErrors = {
     val initial = diag(inverseOfXtimesXt).toArray.map(math.sqrt(_) * residualStandardError)
     val filtered = initial.map(replaceZero)
     filtered
+    //initial
   }
   
   /** T-statistic for each coefficient; the final entry is for the intercept */
   val tStatistics = for (i <- 0 until k) yield { coefficients(i) / standardErrors(i) }
 
   /** Performs Two-tailed test and gets a p-value from the T-statistic */
-  private[this] val tStatistic2pValue = (t: Double) => (1 - new StudentsT(degreesOfFreedom).cdf(math.abs(t))) * 2
+  private val tStatistic2pValue = (t: Double) => (1 - new StudentsT(degreesOfFreedom).cdf(math.abs(t))) * 2
   
   /** p-value for each coefficient; the final entry is for the intercept */
   val pValues = tStatistics.map(tStatistic2pValue(_)).toList
   
-  lazy private[this] val sum = (i: DenseVector[Double]) => i.reduce((x,y) => x + y)
-  lazy private[this] val sumOfSquared = (i: DenseVector[Double]) => sum( i.map(math.pow(_, 2)) )
+  lazy private val sum = (i: DenseVector[Double]) => i.reduce((x,y) => x + y)
+  lazy private val sumOfSquared = (i: DenseVector[Double]) => sum( i.map(math.pow(_, 2)) )
     
   /** Key is the name of the X variable, the value is the p-value associated with it */
   lazy val pValueMap = (xColumnNames :+ "intercept").zip(pValues).toMap
