@@ -205,17 +205,17 @@ object RDDPrototype {
       
       val namePValuePairs = bestRegression.xColumnNames.zip(bestRegression.pValues)
       
-      val entriesSkippedThisRound = namePValuePairs.map(pair => {
+      namePValuePairs.foreach(pair => {
         if (pair._2 >= threshold) {
           // Remove this term from the prev_added collection, and move it to the skipped category
           new_collections.added_prev.remove(pair._1)
           new_collections.skipped.add(pair._1)
-          
-          // Add the name to the entriesSkippedThisRound variable so that at the end, this can be removed
-          // from the BestRegression that is passed to the next iteration
-          pair._1
         }
       })
+        
+      // Add the name to the entriesSkippedThisRound variable so that at the end, this can be removed
+          // from the BestRegression that is passed to the next iteration
+      val entriesSkippedThisRound = namePValuePairs.filter(_._2 >= threshold).map(_._1)
       
       if (new_collections.not_added.size == 0) {
         /*
@@ -252,7 +252,13 @@ object RDDPrototype {
          *  and then include the new best regression in the next iteration
          */
         val newBestRegression = {
-          if (entriesSkippedThisRound.length != 0) {
+                    
+          
+          if (entriesSkippedThisRound.length > 0) {
+            
+            entriesSkippedThisRound.foreach(x => print(x + "poiuyt"))
+
+            
             val newestXColName = bestRegression.xColumnNames.last
             val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
           
@@ -263,7 +269,7 @@ object RDDPrototype {
             //   the latest term to be added
             val xVals = significantXColNames.map(addedPrevBroadcast.value(_)).toVector :+ bestRegression.lastXColumnsValues
             val yVals = broadcastPhenotypes.value(phenotypeName)
-            val xColNames = newestXColName +: otherXColNames
+            val xColNames = newestXColName +: significantXColNames
           
             new OLSRegression(xColNames, phenotypeName, xVals, yVals)
           }

@@ -65,7 +65,6 @@ class OLSRegression(val xColumnNames: Array[String],
     val initial = diag(inverseOfXtimesXt).toArray.map(math.sqrt(_) * residualStandardError)
     val filtered = initial.map(replaceZero)
     filtered
-    //initial
   }
   
   /** T-statistic for each coefficient; the final entry is for the intercept */
