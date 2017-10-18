@@ -252,12 +252,8 @@ object RDDPrototype {
          *  and then include the new best regression in the next iteration
          */
         val newBestRegression = {
-                    
           
           if (entriesSkippedThisRound.length > 0) {
-            
-            entriesSkippedThisRound.foreach(x => print(x + "poiuyt"))
-
             
             val newestXColName = bestRegression.xColumnNames.last
             val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
