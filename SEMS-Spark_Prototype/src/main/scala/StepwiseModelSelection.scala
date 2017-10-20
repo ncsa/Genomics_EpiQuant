@@ -73,6 +73,7 @@ object StepwiseModelSelection {
 
         val spark = SparkSession
                       .builder
+                      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                       .appName("SEMS")
                       .master(parsed.get.sparkMaster)
                       .getOrCreate()
