@@ -318,6 +318,7 @@ object RDDPrototype {
     
     // Spread pairwise Vector across cluster
     val pairwiseCombinations = createPairwiseList(snpData.dataNames)
+    
     val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
 
     // Parallelize the original table into an RDD

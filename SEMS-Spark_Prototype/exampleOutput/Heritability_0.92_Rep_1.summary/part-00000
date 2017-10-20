@@ -1,0 +1,14 @@
+Calculation time (in seconds): 1.167936067
+Calculation time (in minutes): 0.01946560111666667
+Calculation time (in hours): 3.2442668527777783E-4
+
+Genotype File: src/test/resources/Genotypes/10.Subset.n=300.epiq
+Phenotype File: src/test/resources/Phenotypes/Simulated.Data.1.Reps.Herit.0.92_n=300.epiq
+
+The Response variable: Heritability_0.92_Rep_1
+
+Name            Estimate   Std. Error   t value   Pr(>|t|)
+S1_10037732     1.378425          NaN       NaN        NaN
+S1_100246792    0.340653     0.101790     3.347   0.000923
+(Intercept)    -0.648751          NaN       NaN        NaN
+
