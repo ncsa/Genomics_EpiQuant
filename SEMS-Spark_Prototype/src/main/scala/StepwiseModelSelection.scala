@@ -2,17 +2,21 @@ import java.io.File
 import scopt._
 import prototype._
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.storage.StorageLevel
 
 case class InputConfig(sparkMaster: String = "",
                        sparkLog: String = "INFO",
                        genotypeInput: String = ".",
                        phenotypeInput: String = ".",
                        output: String = ".",
-                       threshold: Double = 0.05
+                       threshold: Double = 0.05,
+                       storageLevel: String = "MEMORY_ONLY"
                       )
 
-object StepwiseModelSelection {
 
+                      
+object StepwiseModelSelection {
+  
   private val argParser = new scopt.OptionParser[InputConfig]("StepwiseModelSelection") {
     head("StepwiseModelSelection")
 
@@ -54,6 +58,12 @@ object StepwiseModelSelection {
       .valueName("WARN, INFO, DEBUG, etc.")
       .action( (x, c) => c.copy(sparkLog = x) )
       .text("Set sparks log verbosity: Defaults to INFO")
+      
+    opt[String]("RDD-storage-level")
+      .required
+      .valueName("<string>")
+      .text("Storage level for the large Spark RDD: Defaults to MEMORY_ONLY")
+      .action( (x, c) => c.copy(storageLevel = x) )
 
   }
   
@@ -70,22 +80,22 @@ object StepwiseModelSelection {
       
       // If there is a valid set of arguments presented
       case Some(config) => {
-
+        
         val spark = SparkSession
                       .builder
                       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                       .appName("SEMS")
-                      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                       .master(parsed.get.sparkMaster)
                       .getOrCreate()
-                      
+                     
         spark.sparkContext.setLogLevel(parsed.get.sparkLog)
         
         RDDPrototype.performSEMS(spark,
                                  parsed.get.genotypeInput,
                                  parsed.get.phenotypeInput,
                                  parsed.get.output,
-                                 parsed.get.threshold
+                                 parsed.get.threshold,
+                                 StorageLevel.fromString(parsed.get.storageLevel)
                                 )
       }
     }  

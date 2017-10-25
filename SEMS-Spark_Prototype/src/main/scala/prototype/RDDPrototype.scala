@@ -8,6 +8,7 @@ import org.apache.spark.sql._
 import org.apache.spark.broadcast._
 import converters.Table
 import java.io.File
+import org.apache.spark.storage.StorageLevel
 
 /*
  * Having a different threshold for the forward and backward steps can lead to oscillations
@@ -301,7 +302,8 @@ object RDDPrototype {
                   genotypeFile: String,
                   phenotypeFile: String,
                   outputFileDirectory: String,
-                  threshold: Double
+                  threshold: Double,
+                  storageLevel: StorageLevel
                  ) {
 
     val totalStartTime = System.nanoTime()
@@ -326,7 +328,7 @@ object RDDPrototype {
 
     // Create the pairwise combinations across the cluster
     val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-    val fullSnpRDD = (singleSnpRDD ++ (pairedSnpRDD)).persist()
+    val fullSnpRDD = (singleSnpRDD ++ (pairedSnpRDD)).persist(storageLevel)
 
     val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
     val phenotypeNames = phenoData.dataNames
