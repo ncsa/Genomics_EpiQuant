@@ -303,7 +303,7 @@ object RDDPrototype {
                   phenotypeFile: String,
                   outputFileDirectory: String,
                   threshold: Double,
-                  storageLevel: StorageLevel
+                  serialization: Boolean
                  ) {
 
     val totalStartTime = System.nanoTime()
@@ -328,6 +328,12 @@ object RDDPrototype {
 
     // Create the pairwise combinations across the cluster
     val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
+    
+    val storageLevel = {
+      if (serialization) StorageLevel.MEMORY_AND_DISK_SER 
+      else StorageLevel.MEMORY_AND_DISK
+    }
+    
     val fullSnpRDD = (singleSnpRDD ++ (pairedSnpRDD)).persist(storageLevel)
 
     val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)

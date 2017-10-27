@@ -10,7 +10,7 @@ case class InputConfig(sparkMaster: String = "",
                        phenotypeInput: String = ".",
                        output: String = ".",
                        threshold: Double = 0.05,
-                       storageLevel: String = "MEMORY_ONLY"
+                       serialization: Boolean = false
                       )
 
 
@@ -59,11 +59,11 @@ object StepwiseModelSelection {
       .action( (x, c) => c.copy(sparkLog = x) )
       .text("Set sparks log verbosity: Defaults to INFO")
       
-    opt[String]("RDD-storage-level")
-      .required
-      .valueName("<string>")
-      .text("Storage level for the large Spark RDD: Defaults to MEMORY_ONLY")
-      .action( (x, c) => c.copy(storageLevel = x) )
+    opt[Boolean]("serialization")
+      .optional
+      .valueName("true or false")
+      .text("Will data be serialized. Defaults to false; if true, need less memory, but runs slower")
+      .action( (x, c) => c.copy(serialization = x) )
 
   }
   
@@ -95,7 +95,7 @@ object StepwiseModelSelection {
                                  parsed.get.phenotypeInput,
                                  parsed.get.output,
                                  parsed.get.threshold,
-                                 StorageLevel.fromString(parsed.get.storageLevel)
+                                 parsed.get.serialization
                                 )
       }
     }  
