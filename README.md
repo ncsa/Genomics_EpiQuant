@@ -17,7 +17,7 @@ This prototype consists of two programs:
     * Its output format has SNPs as rows and Samples as columns, with a string called 'HeaderLine'
       located in the top left 'corner' of the output tsv file (often labeled .epiq for EpiQuant format)
   * `StepwiseModelSelection` (or just `SEMS`)
-    * This performs 
+    * This performs the SEMS model-building procedure.
 
 ### SEMS algorithm
 
@@ -37,7 +37,8 @@ Forward Step:
 
 Backward Step:
   4. Check previously added terms
-       if any of the previously added terms are not insignificant, remove them from the model
+       if any of the previously added terms are no longer significant, remove them from the model,
+         and skip them on the next iteration
 
 Recursive call:
   if there are more terms that could be added to the model, repeat this process starting from step 1
@@ -68,7 +69,8 @@ The jar with dependencies included will be created within the newly created `tar
 
 ### Unit Testing
 
-Unit tests using JUnit have been constructed for the functions/methods of the prototype, and are automatically conducted when building with the `mvn package` command.
+Unit tests using JUnit have been constructed for the functions/methods of the prototype, 
+and are automatically conducted when building with the `mvn package` command.
 
 ### Statistical Validation
 
