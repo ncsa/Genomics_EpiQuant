@@ -46,6 +46,8 @@ Recursive call:
   if there are more terms that could be added to the model, repeat this process starting from step 1
   else, return the current model
 ```
+<img src=./media/SEMS-algorithm.png width="900">
+
 
 ## Installation
 
