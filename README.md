@@ -4,7 +4,7 @@
 
 Computing the two-way interactions between terms when detecting epistasis can become computationally and memory intensive very quickly. However, because the SEMS process can be easily implemented in an iterative map-reduce style, it naturally lends itself to the Apache Spark platform.
 
-After experimenting with Spark's DataFrame abstraction and corresponding machine learning library, we found that its model of parallelism did not adequately suit our needs. We therefore reverted back to Spark's original RDD data structure, which allows developers a greater level of control over how data is parallelized. Furthermore, we implemented our own OLS Regression functions using the Breeze Linear Algebra Library, Scala's wrapper for the standard BLAS/LAPACK libraries.
+After experimenting with Spark's DataFrame abstraction and corresponding machine learning library, we found that its model of parallelism did not adequately suit our needs. We therefore reverted back to Spark's original RDD data structure, which allows developers a greater level of control over how data is parallelized. Furthermore, we implemented our own OLS Regression functions with Breeze, Scala's wrapper for the standard BLAS/LAPACK libraries, instead of using Spark's Machine Learning Library, which will be tailored exclusively for DataFrames in Spark3.
 
 ## Program Structure
 
@@ -22,7 +22,7 @@ This prototype consists of two programs:
 ### SEMS algorithm
 
 Data Structure Construction
-* Given the original input SNP table, compute the full Epistatic-term table parallelized throughout the cluster
+`Given the original input SNP table, compute the full Epistatic-term table parallelized throughout the cluster`
 
 **Steps (Slightly simplified):**
 ```
