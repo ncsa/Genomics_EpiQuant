@@ -24,22 +24,25 @@ This prototype consists of two programs:
 Data Structure Construction
 * Given the original input SNP table, compute the full Epistatic-term table parallelized throughout the cluster
 
-Steps:
-
-Forward Step (Slightly simplified)
+**Steps (Slightly simplified):**
 ```
-1. Map
-     For each SNP/SNP-Combination, perform an OLS Regression against the input phenotype
-2. Reduce
-     Find which Regression had the lowest p-value
-3. Add to model?
-     if the best regression has a p-value below the threshold, add it to the model
-     else, return the previous best model
-```  
-  
-* **Backward Step**
+Forward Step:
+  1. Map
+       For each SNP/SNP-Combination, perform an OLS Regression against the input phenotype
+  2. Reduce
+       Find which Regression had the lowest p-value
+  3. Add to model?
+       if the best regression has a p-value below the threshold, add it to the model
+       else, return the previous best model  
 
-** 
+Backward Step:
+  4. Check previously added terms
+       if any of the previously added terms are not insignificant, remove them from the model
+
+Recursive call:
+  if there are more terms that could be added to the model, repeat this process starting from step 1
+
+```
 
 ## Installation
 
