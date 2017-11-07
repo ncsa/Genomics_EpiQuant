@@ -21,22 +21,24 @@ This prototype consists of two programs:
 
 ### SEMS algorithm
 
-Data Structure Construction
+**Data Structure Construction:**
+
 `Given the original input SNP table, compute the full Epistatic-term table parallelized throughout the cluster`
 
 **Steps (Slightly simplified):**
+
 ```
 Forward Step:
   1. Map
        For each SNP/SNP-Combination, perform an OLS Regression against the input phenotype
   2. Reduce
        Find which Regression had the lowest p-value
-  3. Add to model?
+  3. Include in model?
        if the best regression has a p-value below the threshold, add it to the model
        else, return the previous best model  
 
 Backward Step:
-  4. Check previously added terms
+  4. Remove previously added terms from model?
        if any of the previously added terms are no longer significant, remove them from the model,
          and skip them on the next iteration
 
