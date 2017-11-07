@@ -67,7 +67,47 @@ The jar with dependencies included will be created within the newly created `tar
 
 ## Usage
 
-### 
+### Convert Format
+```
+ConvertFormat
+Usage: ConvertFormat [options]
+
+Required Arguments
+------------------
+  -i, --input <file>       Path of the file to convert
+  -o, --output <file>      Path where the output file will be placed
+  --inputType <String>     The format of the input file { plink | custom }
+
+Optional Arguments
+------------------
+  -d, --delimiter { default = <tab> }
+                           Set what delimiter to use
+  -t, --transpose { default = false }
+                           Transpose the data
+  --deleteColumns <Int>,<Int>,...
+                           Comma separated list of columns to delete; Count from 0
+```
+### StepwiseModelSelection (or SEMS)
+```
+Usage: StepwiseModelSelection [options]
+
+Required Arguments
+------------------
+  --spark-master <string>  
+  -G, --genotypeInput <file>
+                           Path to the genotype file
+  -P, --phenotypeInput <file>
+                           Path to the phenotype file
+  -o, --output <file>      Path to where the output file will be placed
+
+Optional Arguments
+------------------
+  --threshold <number>     The p-value threshold for the backward and forward steps: Defaults to 0.05
+  --spark-log-level WARN, INFO, DEBUG, etc.
+                           Set sparks log verbosity: Defaults to INFO
+  --serialization true or false
+                           Will data be serialized. Defaults to false; if true, need less memory, but runs slower
+```
 
 ## Validation
 
