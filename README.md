@@ -77,7 +77,7 @@ Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require dif
 ConvertFormat
 Usage: ConvertFormat [options]
 
-  --inputType String  Input type: { Custom | Plink | HapMap }
+  --inputType <String>  Input type: { Custom | Plink | HapMap }
 ```
 ##### ConvertFormat --inputType Custom
 ```
