@@ -16,7 +16,7 @@ object ConvertFormat {
       
     opt[String]("inputType")
       .required
-      .valueName("String")
+      .valueName("<String>")
       .action( (x, c) => c.copy(inputType = x) )
       .text("Input type: { Custom | Plink | HapMap }")
     
