@@ -12,8 +12,6 @@ case class InputConfig(sparkMaster: String = "",
                        threshold: Double = 0.05,
                        serialization: Boolean = false
                       )
-
-
                       
 object StepwiseModelSelection {
   
