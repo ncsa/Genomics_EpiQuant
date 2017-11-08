@@ -68,15 +68,25 @@ The jar with dependencies included will be created within the newly created `tar
 ## Usage
 
 ### Convert Format
+
+Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require different arguments, the first argument ConvertFormat
+  needs is the --inputType flag. After this is entered, the options for each specific type of parser will be given.
+
+#### ConvertFormat Alone
 ```
 ConvertFormat
 Usage: ConvertFormat [options]
+
+  --inputType String  Input type: { Custom | Plink | HapMap }
+```
+##### ConvertFormat --inputType Custom
+```
+Usage: Custom [options]
 
 Required Arguments
 ------------------
   -i, --input <file>       Path of the file to convert
   -o, --output <file>      Path where the output file will be placed
-  --inputType <String>     The format of the input file { plink | custom }
 
 Optional Arguments
 ------------------
@@ -87,6 +97,8 @@ Optional Arguments
   --deleteColumns <Int>,<Int>,...
                            Comma separated list of columns to delete; Count from 0
 ```
+**More types of parsers will be added at a future date**
+
 ### StepwiseModelSelection (or SEMS)
 ```
 Usage: StepwiseModelSelection [options]
