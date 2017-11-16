@@ -10,6 +10,7 @@
 
 ## Command-line programs:
 
+### How GATK4 uses annotations
 To specify properties of command-line programs, the GATK code uses a system of special annotations (marked by '@' signs in Java)
    For example:
 ```
@@ -36,6 +37,7 @@ With scala, we can just mix in (or extend) a trait, which is like an interface t
 
 I think we should go with a trait, because there is no need to have a case class layer in between the concrete class and the fields we want (unless we end up pattern matching against the properties case class, which we may)
 
+Toy example which uses a trait to guarantee Program
 ```
 trait ProgramProperties {
     val name: String
@@ -64,3 +66,18 @@ object Implementation extends App {
     println(newProgram.printSomething())
 }
 ```
+### annotations vs. a Trait
+The main benefit of using annotations is that it makes it easy to find all of the classes/methods that have it **at runtime through reflection**
+
+#### Tradeoffs
+
+Let's say we want to print all of the command-line help information with one command when the user adds the -h or --help flag:
+
+If we use annotations, we do not need to keep track of all of the classes that have that annotation, as we can just find and print their usage info at runtime.
+
+If we use traits, it would be harder to look them up at runtime using reflection. What I naively think we would do in that situation is just maintain a list of the classes that extend the trait, and then print their usage from that information. 
+If we only have a few command
+
+#### Conclusion
+
+If we only have a few independent executable programs, then we should just stick with traits, as annotations will be a little harder to understand for newcomers.
