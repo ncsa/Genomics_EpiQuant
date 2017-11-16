@@ -35,3 +35,32 @@ After some experimentation, I think I have figured it out. It comes down to two 
 With scala, we can just mix in (or extend) a trait, which is like an interface that can have abstract fields as well as methods, or have an abstract class that contains a case class with the properties contained within it.
 
 I think we should go with a trait, because there is no need to have a case class layer in between the concrete class and the fields we want (unless we end up pattern matching against the properties case class, which we may)
+
+```
+trait ProgramProperties {
+    val name: String
+    val id: String
+    val number: Int
+    val exampleProgram: Boolean
+}
+
+abstract class AbstractProgram extends ProgramProperties {
+    def printSomething()
+}
+
+class ConcreteProgram extends AbstractProgram {
+    val name = "ConcreteProgram"
+    val id = "71GG9"
+    val number = 77
+    val exampleProgram = false
+
+    def printSomething() = println("Look, I printed something")
+}
+
+object Implementation extends App {
+    val newProgram = new ConcreteProgram
+
+    println(newProgram.name)
+    println(newProgram.printSomething())
+}
+```
