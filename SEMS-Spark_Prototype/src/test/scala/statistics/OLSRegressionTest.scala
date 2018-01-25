@@ -5,7 +5,8 @@ import org.junit._
 import scala.Vector
 
 object OLSRegressionTest {
-
+  final val DELTA = 1e-5
+  
   var simpleReg: OLSRegression = _
   var multiReg: OLSRegression = _
 
@@ -194,4 +195,18 @@ F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
     assertTrue(X3 > 0.338 && X3 < 0.340)
     assertTrue(intercept > 0.255 && intercept < 0.257)
   }
+  /*
+  @Test def multiAICTest {
+    /* Should agree with 
+     * 
+     * AIC(lm(y~x1+x2+x3))
+     * 
+     * in R
+     */
+    val actual = OLSRegressionTest.multiReg.AIC
+    println("Actual: " + actual.toString)
+    val expected = 2.465923
+    assertEquals(expected, actual, OLSRegressionTest.DELTA)
+    
+  }*/
 }
