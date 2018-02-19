@@ -56,8 +56,24 @@ pValues =
 ********************
 What we still need
 ********************
+SS
+   There are different numbers reported for the mean and the error (also called the residuals I believe)
+   The RSS we computed earlier is the sum of squared residuals
+   
+   SS_model = sumOf(y_hat - mean_y)^2
+
+MS (just SS divided by the degrees of freedom?)
+
+Also, when looking at a standard ANOVA table, I notice that the mean (also referred to as the "Factor") has m-1 degrees of freedom,
+  whereas the Error has n -m DoF, and they add up to n - 1 for the full model.
+My question is, what does the m stand for? Is it the number of terms included in the model?
+
+
 AIC
 BIC
+mBIC
+model R^2
+
 
 
 
