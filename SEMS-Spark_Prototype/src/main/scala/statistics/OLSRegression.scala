@@ -21,7 +21,7 @@ Now we have/compute:
 ######################
 
 N = length of Y
-k = number of columns in X after 
+k = number of columns in X after adding the column of 1's
 
 // Degrees of freedom
 dof = N - k
@@ -61,24 +61,20 @@ SS
    The RSS we computed earlier is the sum of squared residuals
    
    SS_model = sumOf(y_hat - mean_y)^2
+   SS_error = RSS
 
-MS (just SS divided by the degrees of freedom?)
+MS (just SS divided by the appropriate degrees of freedom?)
 
-Also, when looking at a standard ANOVA table, I notice that the mean (also referred to as the "Factor") has m-1 degrees of freedom,
-  whereas the Error has n -m DoF, and they add up to n - 1 for the full model.
+Also, when looking at a standard ANOVA table, I notice that the mean (also referred to as the "Factor") has m - 1 degrees of freedom,
+  whereas the Error has n - m DoF, and they add up to n - 1 for the full model.
 My question is, what does the m stand for? Is it the number of terms included in the model?
 
+How do I calculate all of the following, using what I already have:
 
 AIC
 BIC
 mBIC
 model R^2
-
-
-
-
-
-
 
  */
 
