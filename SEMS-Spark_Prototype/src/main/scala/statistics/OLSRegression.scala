@@ -75,8 +75,6 @@ How do I calculate all of the following, using what I already have:
 
 AIC
 BIC
-<<<<<<< HEAD
-
 
 Greetings Alex,
 
