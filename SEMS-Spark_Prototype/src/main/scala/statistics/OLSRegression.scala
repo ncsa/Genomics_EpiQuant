@@ -23,7 +23,7 @@ Now we have/compute:
 ######################
 
 N = length of Y
-k = number of columns in X after 
+k = number of columns in X after adding the column of 1's
 
 // Degrees of freedom
 dof = N - k
@@ -58,8 +58,24 @@ pValues =
 ********************
 What we still need
 ********************
+SS
+   There are different numbers reported for the mean and the error (also called the residuals I believe)
+   The RSS we computed earlier is the sum of squared residuals
+   
+   SS_model = sumOf(y_hat - mean_y)^2
+   SS_error = RSS
+
+MS (just SS divided by the appropriate degrees of freedom?)
+
+Also, when looking at a standard ANOVA table, I notice that the mean (also referred to as the "Factor") has m - 1 degrees of freedom,
+  whereas the Error has n - m DoF, and they add up to n - 1 for the full model.
+My question is, what does the m stand for? Is it the number of terms included in the model?
+
+How do I calculate all of the following, using what I already have:
+
 AIC
 BIC
+<<<<<<< HEAD
 
 
 Greetings Alex,
@@ -149,6 +165,10 @@ model R^2
 Thanks Alex, I really appreciate your help with this.
 
 Jacob
+=======
+mBIC
+model R^2
+>>>>>>> branch 'master' of https://github.com/ncsa/NCSA-Genomics_EpiQuant_SEMS_Spark
 
  */
 
