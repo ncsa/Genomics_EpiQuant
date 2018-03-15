@@ -19,4 +19,6 @@ Note that the phenotype vector is still represented as a DenseVector at this poi
 
 March 15th, 2018,
 
-The functions for the CSCMatrix (SparseMatrices) are really lacking. They can multiply and transpose matrices, but cannot find the inverse. Jacob is beginning to think that we should just have Sparse Vectors in the RDDs storing the distrbuted SNP values, and then, when the time comes to take that information and do the stats, we remain using DenseMatrices. 
+The functions for the CSCMatrix (SparseMatrices) are really lacking. They can multiply and transpose matrices, but cannot find the inverse. Jacob is beginning to think that we should just have Sparse Vectors in the RDDs storing the distrbuted SNP values, and then, when the time comes to take that information and do the stats, we remain using DenseMatrices.
+
+If we store the RDD data as Sparse Vectors, but turn them into DenseVectors/Matrices when they are actually used, it won't save on the memory footprint (Because we run the regression building step for EACH Sparse Vector in the RDD.)
