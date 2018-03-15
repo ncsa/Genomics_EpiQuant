@@ -16,3 +16,7 @@ March 14th, 2018,
 Jacob has defined abstract classes that implement the Statistics and SEAMS, with subclasses that perform the Sparse or Dense Vector/Matrix.
 
 Note that the phenotype vector is still represented as a DenseVector at this point, as the phenotype data is ususally continuous with few zeros.
+
+March 15th, 2018,
+
+The functions for the CSCMatrix (SparseMatrices) are really lacking. They can multiply and transpose matrices, but cannot find the inverse. Jacob is beginning to think that we should just have Sparse Vectors in the RDDs storing the distrbuted SNP values, and then, when the time comes to take that information and do the stats, we remain using DenseMatrices. 
