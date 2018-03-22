@@ -1,6 +1,6 @@
 import java.io.File
 import scopt._
-import prototype._
+import seams._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
@@ -88,13 +88,13 @@ object StepwiseModelSelection {
                      
         spark.sparkContext.setLogLevel(parsed.get.sparkLog)
         
-        RDDPrototype.performSEMS(spark,
-                                 parsed.get.genotypeInput,
-                                 parsed.get.phenotypeInput,
-                                 parsed.get.output,
-                                 parsed.get.threshold,
-                                 parsed.get.serialization
-                                )
+        SEAMSDense.performSEAMS(spark,
+                                parsed.get.genotypeInput,
+                                parsed.get.phenotypeInput,
+                                parsed.get.output,
+                                parsed.get.threshold,
+                                parsed.get.serialization
+                               )
       }
     }  
   }
