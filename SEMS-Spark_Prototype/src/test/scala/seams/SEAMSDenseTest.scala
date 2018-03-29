@@ -1,5 +1,6 @@
 package seams
 
+import org.apache.spark.broadcast.Broadcast
 import scala.collection.mutable.HashSet
 import org.apache.spark.sql._
 import org.junit.Assert._
@@ -7,7 +8,7 @@ import org.junit._
 import breeze.linalg.DenseVector
 
 class SEAMSDenseTest {
-  /** Maximum acceptable difference between expected and actual float values used in Assert statements */
+  /** Maximum acceptable difference between expected and actual values used in Assert statements */
   final val DELTA = 1e-5
   
   var spark: SparkSession = SparkSession.builder.master("local").appName("Testing").getOrCreate()
@@ -22,7 +23,7 @@ class SEAMSDenseTest {
   val stepDataY = List( ("pheno", DenseVector(78.5, 74.3, 104.3, 72.5, 93.1, 115.9, 83.8, 113.3, 109.4)) )
   
   var broadcastXTable = spark.sparkContext.broadcast(stepDataX.toMap)
-  var broadcastYTable = spark.sparkContext.broadcast(stepDataY.toMap)
+  var broadcastYTable: Broadcast[Map[String, DenseVector[Double]]] = spark.sparkContext.broadcast(stepDataY.toMap)
   
   val stepDataRDD = spark.sparkContext.parallelize(stepDataX)
 

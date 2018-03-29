@@ -28,7 +28,7 @@ class OLSRegressionDense(xColumnNames: Array[String],
   lazy val inverseOfXtimesXt = pinv(transposedX * XMatrixWith1sColumn)
 
   /** Standard error for each coefficient; the final entry is for the intercept */
-  lazy val standardErrors = {
+  lazy val standardErrors: DenseVector[Double] = {
     val initial = diag(inverseOfXtimesXt).map(math.sqrt(_) * residualStandardError)
     val filtered = initial.map(replaceZero)
     filtered

@@ -20,9 +20,8 @@ case class StepCollections(not_added: HashSet[String],
 abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
                        ) {
-  lazy val dataNames = dataPairs.map(_._1)
+  lazy val dataNames: Vector[String] = dataPairs.map(_._1)
 }
-
 
 trait SEAMS {
   
@@ -56,7 +55,7 @@ trait SEAMS {
    */
   
   protected def flattenArrayOfBreezeVectors(input: Array[breeze.linalg.Vector[Double]]): Array[Double] = {
-    ( input.map( breezeVect => breezeVect.toDenseVector.toScalaVector).flatten ) 
+    input.flatMap(breezeVect => breezeVect.toDenseVector.toScalaVector)
   }
                   
   /**
@@ -68,7 +67,7 @@ trait SEAMS {
   def createPairwiseList(columnNames: Seq[String]): Seq[(String, String)] = {
     // Creates a Vector of all pairwise combinations of each column (names only, does not
     //   actually compute the new values: that will be done per partition)
-    for (i <- 0 until columnNames.length; j <- i + 1 until columnNames.length) yield {
+    for (i <- columnNames.indices; j <- i + 1 until columnNames.length) yield {
       (columnNames(i), columnNames(j))
     }
   }
@@ -120,7 +119,7 @@ trait SEAMS {
       else StorageLevel.MEMORY_AND_DISK
     }
     
-    val fullSnpRDD = (singleSnpRDD ++ (pairedSnpRDD)).persist(storageLevel)
+    val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
 
     val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
     val phenotypeNames = phenoData.dataNames

@@ -16,7 +16,7 @@ class SEAMSDense {}
 object SEAMSDense extends SEAMS {
 
   // Implicit function needed for the "flatten" method to work on a DenseVector
-  implicit val DenseVector2ScalaVector = (s: DenseVector[Double]) => s.toScalaVector
+  implicit val DenseVector2ScalaVector: DenseVector[Double] => Vector[Double] = (s: DenseVector[Double]) => s.toScalaVector
   
   /** Reads in a file from HDFS converted previously with the ConvertFormat tool */
   def readHDFSFile(filePath: String, spark: SparkContext): DenseFileData = {
@@ -103,7 +103,7 @@ object SEAMSDense extends SEAMS {
         val numRows = yVals.length
         val numCols = xColNames.length
         
-        val xVals: Array[Double] = xColNames.map(addedPrevBroadcast.value(_)).flatten
+        val xVals: Array[Double] = xColNames.flatMap(addedPrevBroadcast.value(_))
 
         val newXColNames = xColNames :+ inputSnp._1
         
@@ -118,7 +118,7 @@ object SEAMSDense extends SEAMS {
     }
 
     def reduceFunction(inputRDD: rdd.RDD[Option[OLSRegression]]): OLSRegression = {
-      val filtered = inputRDD.filter(x => !x.isEmpty).map(_.get)
+      val filtered = inputRDD.filter(x => x.isDefined).map(_.get)
       if (!filtered.isEmpty()) {
         filtered.reduce((x, y) => {
           if (getNewestTermsPValue(x) <= getNewestTermsPValue(y)) x else y
@@ -147,7 +147,7 @@ object SEAMSDense extends SEAMS {
                                     *   partitions, we know that there is only one. We just grab it with the (0)
                                     *   indexing
                                     */
-                                   snpDataRDD.lookup(name)(0)
+                                   snpDataRDD.lookup(name).head
                                   )
                           }).toMap
                           
@@ -160,7 +160,7 @@ object SEAMSDense extends SEAMS {
     val mappedValues: rdd.RDD[Option[OLSRegression]] = snpDataRDD.map(mapFunction(_, addedPrevBroadcast))
     val bestRegression: OLSRegression = reduceFunction(mappedValues)
 
-    bestRegression.printSummary
+    bestRegression.printSummary()
     collections.skipped.foreach(x => print(x + ", "))
 
     // If the p-value of the newest term does not meet the threshold, return the prev_best_model
@@ -207,7 +207,7 @@ object SEAMSDense extends SEAMS {
           // from the BestRegression that is passed to the next iteration
       val entriesSkippedThisRound = namePValuePairs.filter(_._2 >= threshold).map(_._1)
       
-      if (new_collections.not_added.size == 0) {
+      if (new_collections.not_added.isEmpty) {
         /*
          * No more terms that could be added. Return the current best model, unless there are entries
          * in the skipped category.
@@ -218,7 +218,7 @@ object SEAMSDense extends SEAMS {
          * If something is in the skipped category at this point it was added during this iteration.
          * and the "bestRegression" variable will still have that term included.
          */
-        if (new_collections.skipped.size == 0) {return bestRegression}
+        if (new_collections.skipped.isEmpty) {return bestRegression}
         else {
           
           val newestXColName = bestRegression.xColumnNames.last

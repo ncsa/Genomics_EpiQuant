@@ -28,7 +28,10 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    * 
    */
   
-  // To estimate the intercept, a column of 1's is added to the matrix in the last position
+  /*
+   * Also called a design matrix
+   * To estimate the intercept, a column of 1's is added to the matrix in the last position
+   */
   protected val XMatrixWith1sColumn: Matrix[Double]
 
   protected val transposedX: Matrix[Double]
@@ -120,7 +123,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   //lazy val log_likelihood = (N + N * (log(2 * math.Pi) + N * log(RSS / N))) // WRONG, FROM DOCUMENT ( SAYS LIKELIHOOD TIMES -2)
   //lazy val log_likelihood = -N/2 * (log(2 * math.Pi) + 1 - log(N) + log(RSS)) // CORRECT, WHAT R DOES
   lazy val log_likelihood: Double = -N/2 * (log(2 * math.Pi) + 1 + log(RSS/N)) // CORRECT, SIMPLIFIED EQUATION
-  
+
   /**
    * AIC
    * 
@@ -156,9 +159,9 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   lazy val adjusted_R_squared: Double = 1 - ( RSS / (N - k)) / (SST / (N - 1) )
   
   /**
-   * F statistic for the model = ( R^2 / (k - 1) ) / ( (1 - R^2) / (N - k) )
+   * F statistic for the model = MS_model / MS_error
    */
-  lazy val F_statistic_model: Double = ( R_squared / (k - 1) ) / ( (1 - R_squared) / (N - k) )
+  lazy val F_statistic_model: Double = total_MS_model / MS_error
   /**
    * THe p-value of the m
    */

@@ -17,6 +17,14 @@ model <- lm(y~x1+x2+x3)
 summary(model)
 anova(model)
 AIC(model)
+
+x <- c(1.0,2,3,5,7)
+y <- c(1.0,2,3,4,5)
+model <- lm(y~x)
+summary(model)
+anova(model)
+AIC(model)
+
 */
  
   val x_names = Array("x1", "x2", "x3")

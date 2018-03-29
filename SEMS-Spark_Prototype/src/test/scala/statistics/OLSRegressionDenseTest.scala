@@ -5,31 +5,54 @@ import org.junit._
 import breeze.linalg.{DenseMatrix, DenseVector}
 
 object OLSRegressionDenseTest {
-  final val DELTA = 1e-5
+  val DELTA = 1e-5
   
   var simpleReg: OLSRegression = _
   var multiReg: OLSRegression = _
 
   @BeforeClass def initialSetup(): Unit = {
 
-    val X1 = Array(1.0, 2, 3, 5, 7)
-    val X2 = Array(6.0, 4, 3, 4, 1)
-    val X3 = Array(100.0, 156, 146, 398, 201)
+    /*
+     *  We found that if we use really small data sets (N < 5) some calculations give results that do not match
+     *    R's output (logLik, AIC, etc.)
+     *
+     *  Decided we should use data sets where N >= 30
+     */
+
+   // val X1 = Array(1.0, 2, 3, 5, 7)
+   // val X2 = Array(6.0, 4, 3, 4, 1)
+   // val X3 = Array(100.0, 156, 146, 398, 201)
+
+    val X1 = Array(27.0, 24, 9, 13, 10, 7, 1, 23, 14, 26,
+                   3, 15, 24, 15, 13, 21, 17, 1, 18, 17,
+                   22, 14, 7, 5, 12, 22, 26, 19, 13, 6
+                  )
+    val X2 = Array(23.0, 4, 19, 19, 3, 17, 13, 23, 4, 14,
+                   15, 15, 18, 23, 23, 18, 23, 5, 7, 12,
+                    2, 30, 12, 12, 15, 18, 17, 22, 6, 13
+                  )
+    val X3 = Array(3.0, 16, 19, 9, 20, 17, 20, 21, 14, 4,
+                   5, 15, 8, 30, 12, 19, 23, 2, 1, 21,
+                   2, 14, 22, 23, 25, 8, 7, 2, 6, 29
+                  )
 
     val multiX: Array[Double] = Vector(X1, X2, X3).flatten.toArray
 
     val matrixSingleX = new DenseMatrix(X1.length, 1, X1)
     val matrixMultiX = new DenseMatrix(X1.length, 3, multiX)
 
-    val Y = DenseVector(1.0, 2, 3, 4, 5)
-    println("check 1")
+    val Y = DenseVector(1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                        21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+                       )
+    //val Y = DenseVector(3.0, 5.5, 6.0, 9.0, 10, 7)
+
 
     //simpleReg = new OLSRegressionDense(Array("X1"), "Y", new DenseMatrix(2,2, Array(1.0,2,3,4)), Y)
     simpleReg = new OLSRegressionDense(Array("X1"), "Y", matrixSingleX, Y)
-    println("check 2")
+    println(simpleReg.Xs)
 
     multiReg = new OLSRegressionDense(Array("X1", "X2", "X3"), "Y", matrixMultiX, Y)
-    println("check 3")
 
   }
 }
@@ -42,106 +65,167 @@ class OLSRegressionDenseTest {
    * Need to agree with the following R output
 
 # Code
-x <- c(1,2,3,5,7)
-y <- c(1,2,3,4,5)
-summary(lm(y~x))
+x <- c(27.0, 24, 9, 13, 10, 7, 1, 23, 14, 26, 3, 15, 24, 15, 13, 21, 17, 1, 18, 17, 22, 14, 7, 5, 12, 22, 26, 19, 13, 6)
+y <- c(1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30)
+model <- lm(y~x)
+
+summary(model)
 
 Call:
 lm(formula = y ~ x)
 
 Residuals:
-       1        2        3        4        5 
--0.31897  0.03448  0.38793  0.09483 -0.19828 
+    Min      1Q  Median      3Q     Max
+-13.857  -6.936   0.116   6.931  14.036
 
 Coefficients:
-            Estimate Std. Error t value Pr(>|t|)   
-(Intercept)  0.67241    0.27622   2.434  0.09297 . 
-x            0.64655    0.06584   9.820  0.00224 **
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept) 16.28041    3.59851   4.524 0.000102 ***
+x           -0.05273    0.21663  -0.243 0.809462
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.3171 on 3 degrees of freedom
-Multiple R-squared:  0.9698,	Adjusted R-squared:  0.9598 
-F-statistic: 96.43 on 1 and 3 DF,  p-value: 0.002245
+Residual standard error: 8.95 on 28 degrees of freedom
+Multiple R-squared:  0.002112,	Adjusted R-squared:  -0.03353
+F-statistic: 0.05925 on 1 and 28 DF,  p-value: 0.8095
 
-  */
+anova(model)
+
+Analysis of Variance Table
+
+Response: y
+          Df  Sum Sq Mean Sq F value Pr(>F)
+x          1    4.75   4.746  0.0592 0.8095
+Residuals 28 2242.75  80.098
+
+logLik(model)
+'log Lik.' -107.2821 (df=3)
+
+AIC(model)
+[1] 220.5642
+
+*/
   
-  @Test def simpleCoefficientsTest {
+  @Test def simpleCoefficientsTest(): Unit = {
     val coefficients = OLSRegressionDenseTest.simpleReg.coefficients
     
     // Two estimates should be present: one for the slope and one for the intercept
     assertEquals(coefficients.length, 2)
     val X1 = coefficients(0)
     val intercept = coefficients(1)
-    
-    assertTrue(X1 > 0.64654 && X1 < 0.64656)
-    assertTrue(intercept > 0.67240 && intercept < 0.67242)
+
+    assertEquals(-0.05273, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(16.28041, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def simpleStandardErrorTest {
+  @Test def simpleStandardErrorTest(): Unit = {
     val stdErrors = OLSRegressionDenseTest.simpleReg.standardErrors
     
     assertEquals(stdErrors.length, 2)
     val X1 = stdErrors(0)
     val intercept = stdErrors(1)
-    
-    assertTrue(X1 > 0.06583 && X1 < 0.06585)
-    assertTrue(intercept > 0.27621 && intercept < 0.27623)
+
+    assertEquals(0.21663, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(3.59851, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def simpleTStatisticTest {
+  @Test def simpleTStatisticTest(): Unit = {
     val tStats = OLSRegressionDenseTest.simpleReg.tStatistics
     
     assertEquals(tStats.length, 2)
     val X1 = tStats(0)
     val intercept = tStats(1)
-    
-    assertTrue(X1 > 9.819 && X1 < 9.821)
-    assertTrue(intercept > 2.433 && intercept < 2.435)
+
+    assertEquals(-0.243, X1, 0.001)
+    assertEquals(4.524, intercept, 0.001)
   }
   
-  @Test def simplePValueTest {
+  @Test def simplePValueTest(): Unit = {
     val pVals = OLSRegressionDenseTest.simpleReg.pValues
     
     assertEquals(pVals.length, 2)
     val X1 = pVals(0)
     val intercept = pVals(1)
-    
-    assertTrue(X1 > 0.00223 && X1 < 0.00225)
-    assertTrue(intercept > 0.09296 && intercept < 0.09298)
+
+    assertEquals(0.809462, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.000102, intercept, OLSRegressionDenseTest.DELTA)
   }
-    /*
+
+  @Test def simpleRSquaredTest(): Unit = {
+    val RSquared = OLSRegressionDenseTest.simpleReg.R_squared
+    assertEquals(0.002112, RSquared, OLSRegressionDenseTest.DELTA)
+  }
+
+  @Test def simpleAdjustedRSquaredTest(): Unit = {
+    val RSquared = OLSRegressionDenseTest.simpleReg.adjusted_R_squared
+    assertEquals(-0.03353, RSquared, OLSRegressionDenseTest.DELTA)
+  }
+
+  @Test def simpleLogLikelihoodTest(): Unit = {
+    val logLik = OLSRegressionDenseTest.simpleReg.log_likelihood
+    assertEquals(-107.2821, logLik, OLSRegressionDenseTest.DELTA)
+  }
+
+  @Test def simpleAICTest(): Unit = {
+    val AIC = OLSRegressionDenseTest.simpleReg.AIC
+    assertEquals(220.5642, AIC, 0.0001)
+  }
+
+  /*
    * MULTIPLE LINEAR REGRESSION TESTS
    * 
    * Should agree with the following R output
 
-x1 <- c(1,2,3,5,7)
-x2 <- c(6,4,3,4,1)
-x3 <- c(100,156,146,398,201)
-y <- c(1,2,3,4,5)
-summary(lm(y~x1+x2+x3))
+x1 <- c(27.0, 24, 9, 13, 10, 7, 1, 23, 14, 26, 3, 15, 24, 15, 13, 21, 17, 1, 18, 17, 22, 14, 7, 5, 12, 22, 26, 19, 13, 6)
+x2 <- c(23.0, 4, 19, 19, 3, 17, 13, 23, 4, 14, 15, 15, 18, 23, 23, 18, 23, 5, 7, 12, 2, 30, 12, 12, 15, 18, 17, 22, 6, 13)
+x3 <- c(3.0, 16, 19, 9, 20, 17, 20, 21, 14, 4,  5, 15, 8, 30, 12, 19, 23, 2, 1, 21, 2, 14, 22, 23, 25, 8, 7, 2, 6, 29)
+y <- c(1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30)
+
+model2 <- lm(y~x1+x2+x3)
+
+summary(model2)
 
 Call:
 lm(formula = y ~ x1 + x2 + x3)
 
 Residuals:
-       1        2        3        4        5 
- 0.02357 -0.17689  0.17543  0.02066 -0.04277 
+     Min       1Q   Median       3Q      Max
+-14.0236  -6.7252   0.1896   7.0406  14.3608
 
 Coefficients:
              Estimate Std. Error t value Pr(>|t|)
-(Intercept)  2.351060   0.998613   2.354    0.256
-x1           0.340324   0.169190   2.011    0.294
-x2          -0.339646   0.186496  -1.821    0.320
-x3           0.003229   0.001900   1.700    0.339
+(Intercept) 16.830240   5.898178   2.853  0.00837 **
+x1          -0.062707   0.246841  -0.254  0.80146
+x2          -0.001349   0.252293  -0.005  0.99577
+x3          -0.027493   0.217198  -0.127  0.90025
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.2547 on 1 degrees of freedom
-Multiple R-squared:  0.9935,	Adjusted R-squared:  0.974 
-F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
+Residual standard error: 9.285 on 26 degrees of freedom
+Multiple R-squared:  0.00278,	Adjusted R-squared:  -0.1123
+F-statistic: 0.02416 on 3 and 26 DF,  p-value: 0.9948
 
+anova(model2)
+Analysis of Variance Table
+
+Response: y
+          Df  Sum Sq Mean Sq F value Pr(>F)
+x1         1    4.75   4.746  0.0551 0.8163
+x2         1    0.12   0.120  0.0014 0.9705
+x3         1    1.38   1.381  0.0160 0.9002
+Residuals 26 2241.25  86.202
+
+logLik(model2)
+'log Lik.' -107.2721 (df=5)
+
+AIC(model2)
+[1] 224.5441
+
+BIC(model2)
+[1] 231.5501
    */
   
-  @Test def multiCoefficientsTest {
+  @Test def multiCoefficientsTest(): Unit = {
     val coefficients = OLSRegressionDenseTest.multiReg.coefficients
     
     // Four estimates should be present: three slopes and one for the intercept
@@ -150,14 +234,14 @@ F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
     val X2 = coefficients(1)
     val X3 = coefficients(2)
     val intercept = coefficients(3)
-    
-    assertTrue(X1 > 0.340323 && X1 < 0.340325)
-    assertTrue(X2 > -0.339647 && X2 < -0.339645)
-    assertTrue(X3 > 0.003228 && X3 < 0.003230)
-    assertTrue(intercept > 2.351059 && intercept < 2.351061)
+
+    assertEquals(-0.062707, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(-0.001349, X2, OLSRegressionDenseTest.DELTA)
+    assertEquals(-0.027493, X3, OLSRegressionDenseTest.DELTA)
+    assertEquals(16.830240, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def multiStandardErrorTest {
+  @Test def multiStandardErrorTest(): Unit = {
     val stdErr = OLSRegressionDenseTest.multiReg.standardErrors
     
     assertEquals(stdErr.length, 4)
@@ -165,14 +249,14 @@ F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
     val X2 = stdErr(1)
     val X3 = stdErr(2)
     val intercept = stdErr(3)
-    
-    assertTrue(X1 > 0.169189 && X1 < 0.169191)
-    assertTrue(X2 > 0.186495 && X2 < 0.186497)
-    assertTrue(X3 > 0.001899 && X3 < 0.001901)
-    assertTrue(intercept > 0.998612 && intercept < 0.998614)
+
+    assertEquals(0.246841, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.252293, X2, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.217198, X3, OLSRegressionDenseTest.DELTA)
+    assertEquals(5.898178, intercept, OLSRegressionDenseTest.DELTA)
   }
     
-  @Test def multiTStatisticTest {
+  @Test def multiTStatisticTest():Unit = {
     val tStats = OLSRegressionDenseTest.multiReg.tStatistics
     
     assertEquals(tStats.length, 4)
@@ -180,14 +264,14 @@ F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
     val X2 = tStats(1)
     val X3 = tStats(2)
     val intercept = tStats(3)
-    
-    assertTrue(X1 > 2.010 && X1 < 2.012)
-    assertTrue(X2 > -1.822 && X2 < -1.820)
-    assertTrue(X3 > 1.699 && X3 < 1.701)
-    assertTrue(intercept > 2.353 && intercept < 2.355)
+
+    assertEquals(-0.254, X1, 0.001)
+    assertEquals(-0.005, X2, 0.001)
+    assertEquals(-0.127, X3, 0.001)
+    assertEquals(2.853, intercept, 0.001)
   }
   
-  @Test def multiPValueTest {
+  @Test def multiPValueTest():Unit = {
     val pVals = OLSRegressionDenseTest.multiReg.pValues
     
     assertEquals(pVals.length, 4)
@@ -195,24 +279,35 @@ F-statistic: 51.05 on 3 and 1 DF,  p-value: 0.1024
     val X2 = pVals(1)
     val X3 = pVals(2)
     val intercept = pVals(3)
-    
-    assertTrue(X1 > 0.293 && X1 < 0.295)
-    assertTrue(X2 > 0.319 && X2 < 0.321)
-    assertTrue(X3 > 0.338 && X3 < 0.340)
-    assertTrue(intercept > 0.255 && intercept < 0.257)
+
+    assertEquals(0.80146, X1, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.99577, X2, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.90025, X3, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.00837, intercept, OLSRegressionDenseTest.DELTA)
   }
-  /*
-  @Test def multiAICTest {
-    /* Should agree with 
-     * 
-     * AIC(lm(y~x1+x2+x3))
-     * 
-     * in R
-     */
-    val actual = OLSRegressionTest.multiReg.AIC
-    println("Actual: " + actual.toString)
-    val expected = 2.465923
-    assertEquals(expected, actual, OLSRegressionTest.DELTA)
-    
-  }*/
+
+  @Test def multiRSquaredTest(): Unit = {
+    val RSquared = OLSRegressionDenseTest.multiReg.R_squared
+    assertEquals(0.00278, RSquared, 0.0001)
+  }
+
+  @Test def multiAdjustedRSquaredTest(): Unit = {
+    val RSquared = OLSRegressionDenseTest.multiReg.adjusted_R_squared
+    assertEquals(-0.1123, RSquared, 0.0001)
+  }
+
+  @Test def multiLogLikelihoodTest(): Unit = {
+    val logLik = OLSRegressionDenseTest.multiReg.log_likelihood
+    assertEquals(-107.2721, logLik, 0.0001)
+  }
+
+  @Test def multiAICTest(): Unit = {
+    val AIC = OLSRegressionDenseTest.multiReg.AIC
+    assertEquals(224.5441, AIC, 0.0001)
+  }
+
+  @Test def multiBICTest(): Unit = {
+    val BIC = OLSRegressionDenseTest.multiReg.BIC
+    assertEquals(231.5501, BIC, 0.0001)
+  }
 }
