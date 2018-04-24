@@ -19,10 +19,6 @@ object OLSRegressionDenseTest {
      *  Decided we should use data sets where N >= 30
      */
 
-   // val X1 = Array(1.0, 2, 3, 5, 7)
-   // val X2 = Array(6.0, 4, 3, 4, 1)
-   // val X3 = Array(100.0, 156, 146, 398, 201)
-
     val X1 = Array(27.0, 24, 9, 13, 10, 7, 1, 23, 14, 26,
                    3, 15, 24, 15, 13, 21, 17, 1, 18, 17,
                    22, 14, 7, 5, 12, 22, 26, 19, 13, 6
@@ -45,13 +41,8 @@ object OLSRegressionDenseTest {
                         11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
                         21, 22, 23, 24, 25, 26, 27, 28, 29, 30
                        )
-    //val Y = DenseVector(3.0, 5.5, 6.0, 9.0, 10, 7)
 
-
-    //simpleReg = new OLSRegressionDense(Array("X1"), "Y", new DenseMatrix(2,2, Array(1.0,2,3,4)), Y)
     simpleReg = new OLSRegressionDense(Array("X1"), "Y", matrixSingleX, Y)
-    println(simpleReg.Xs)
-
     multiReg = new OLSRegressionDense(Array("X1", "X2", "X3"), "Y", matrixMultiX, Y)
 
   }
@@ -104,6 +95,12 @@ logLik(model)
 AIC(model)
 [1] 220.5642
 
+BIC(model)
+[1] 224.7678
+
+Add up Sum Sq column to get SST
+SST = 2247.50
+
 */
   
   @Test def simpleCoefficientsTest(): Unit = {
@@ -152,24 +149,23 @@ AIC(model)
   }
 
   @Test def simpleRSquaredTest(): Unit = {
-    val RSquared = OLSRegressionDenseTest.simpleReg.R_squared
-    assertEquals(0.002112, RSquared, OLSRegressionDenseTest.DELTA)
+    assertEquals(0.002112, OLSRegressionDenseTest.simpleReg.R_squared, OLSRegressionDenseTest.DELTA)
   }
 
   @Test def simpleAdjustedRSquaredTest(): Unit = {
-    val RSquared = OLSRegressionDenseTest.simpleReg.adjusted_R_squared
-    assertEquals(-0.03353, RSquared, OLSRegressionDenseTest.DELTA)
+    assertEquals(-0.03353, OLSRegressionDenseTest.simpleReg.adjusted_R_squared, OLSRegressionDenseTest.DELTA)
   }
 
   @Test def simpleLogLikelihoodTest(): Unit = {
-    val logLik = OLSRegressionDenseTest.simpleReg.log_likelihood
-    assertEquals(-107.2821, logLik, OLSRegressionDenseTest.DELTA)
+    assertEquals(-107.2821, OLSRegressionDenseTest.simpleReg.log_likelihood, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def simpleAICTest(): Unit = {
-    val AIC = OLSRegressionDenseTest.simpleReg.AIC
-    assertEquals(220.5642, AIC, 0.0001)
-  }
+  @Test def simpleAICTest(): Unit =  assertEquals(220.5642, OLSRegressionDenseTest.simpleReg.AIC, 0.0001)
+  @Test def simpleBICTest(): Unit = assertEquals(224.7678, OLSRegressionDenseTest.simpleReg.BIC, 0.0001)
+
+  @Test def simpleSumOfSquaredResidualsTest(): Unit = assertEquals(2242.75, OLSRegressionDenseTest.simpleReg.RSS, 0.01)
+  @Test def simpleSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.simpleReg.SST, 0.01)
+
 
   /*
    * MULTIPLE LINEAR REGRESSION TESTS
@@ -223,6 +219,9 @@ AIC(model2)
 
 BIC(model2)
 [1] 231.5501
+
+Add up Sum Sq column to get SST
+SST = 2247.50
    */
   
   @Test def multiCoefficientsTest(): Unit = {
@@ -286,28 +285,21 @@ BIC(model2)
     assertEquals(0.00837, intercept, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def multiRSquaredTest(): Unit = {
-    val RSquared = OLSRegressionDenseTest.multiReg.R_squared
-    assertEquals(0.00278, RSquared, 0.0001)
-  }
+  @Test def multiRSquaredTest(): Unit = assertEquals(0.00278, OLSRegressionDenseTest.multiReg.R_squared, 0.0001)
 
   @Test def multiAdjustedRSquaredTest(): Unit = {
-    val RSquared = OLSRegressionDenseTest.multiReg.adjusted_R_squared
-    assertEquals(-0.1123, RSquared, 0.0001)
+    assertEquals(-0.1123, OLSRegressionDenseTest.multiReg.adjusted_R_squared, 0.0001)
   }
 
   @Test def multiLogLikelihoodTest(): Unit = {
-    val logLik = OLSRegressionDenseTest.multiReg.log_likelihood
-    assertEquals(-107.2721, logLik, 0.0001)
+    assertEquals(-107.2721, OLSRegressionDenseTest.multiReg.log_likelihood, 0.0001)
   }
 
-  @Test def multiAICTest(): Unit = {
-    val AIC = OLSRegressionDenseTest.multiReg.AIC
-    assertEquals(224.5441, AIC, 0.0001)
-  }
+  @Test def multiAICTest(): Unit = assertEquals(224.5441, OLSRegressionDenseTest.multiReg.AIC, 0.0001)
+  @Test def multiBICTest(): Unit = assertEquals(231.5501, OLSRegressionDenseTest.multiReg.BIC, 0.0001)
 
-  @Test def multiBICTest(): Unit = {
-    val BIC = OLSRegressionDenseTest.multiReg.BIC
-    assertEquals(231.5501, BIC, 0.0001)
-  }
+  @Test def multiSumOfSquaredResidualsTest(): Unit = assertEquals(2241.25, OLSRegressionDenseTest.multiReg.RSS, 0.01)
+  @Test def multiSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.multiReg.SST, 0.01)
+
+
 }

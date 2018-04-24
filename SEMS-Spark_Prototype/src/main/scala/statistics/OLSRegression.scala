@@ -43,8 +43,10 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    *   and that method is specific to the matrix type
    */
   val standardErrors: breeze.linalg.Vector[Double]
-  
+
   def lastXColumnsValues(): breeze.linalg.Vector[Double]
+
+  val anovaTable: ANOVATable
   
   /*
    * CONCRETE FUNCTIONS AND FIELDS
@@ -102,7 +104,8 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   /***************
    * NEEDS VERIFICATION
    ***************/
-  lazy val total_SS_model: Double = sumOfSquared( fittedValues - meanY)
+    
+  lazy val total_SS_model: Double = sumOfSquared(fittedValues - meanY)
   lazy val total_MS_model: Double = total_SS_model / DoF_model
   
   lazy val MS_error: Double = RSS / DoF_error
@@ -162,8 +165,9 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    * F statistic for the model = MS_model / MS_error
    */
   lazy val F_statistic_model: Double = total_MS_model / MS_error
+
   /**
-   * THe p-value of the m
+   * The p-value of the model
    */
   lazy val p_value_model: Double = 1 - new FDistribution(DoF_model, DoF_error).cdf(F_statistic_model)
   
@@ -176,17 +180,17 @@ abstract class OLSRegression(val xColumnNames: Array[String],
  // lazy val AIC = N * breeze.numerics.log(RSS/N) + 2*k
   
   /** T-statistic for each coefficient; the final entry is for the intercept */
-  val tStatistics: IndexedSeq[Double] = for (i <- 0 until k) yield { coefficients(i) / standardErrors(i) }
+  lazy val tStatistics: IndexedSeq[Double] = for (i <- 0 until k) yield { coefficients(i) / standardErrors(i) }
 
   /** Performs Two-tailed test and gets a p-value from the T-statistic */
-  private val tStatistic2pValue = (t: Double) => (1 - new StudentsT(degreesOfFreedom).cdf(math.abs(t))) * 2
+  lazy private val tStatistic2pValue = (t: Double) => (1 - new StudentsT(degreesOfFreedom).cdf(math.abs(t))) * 2
   
   /** p-value for each coefficient; the final entry is for the intercept */
-  val pValues: List[Double] = tStatistics.map(tStatistic2pValue(_)).toList
+  lazy val pValues: List[Double] = tStatistics.map(tStatistic2pValue(_)).toList
   
   /** Key is the name of the X variable, the value is the p-value associated with it */
   lazy val pValueMap: Map[String, Double] = (xColumnNames :+ "intercept").zip(pValues).toMap
-  
+
   /** A summary of the regression stored as a single string ('\n' are included) */
   lazy val summaryString: String = {
     
