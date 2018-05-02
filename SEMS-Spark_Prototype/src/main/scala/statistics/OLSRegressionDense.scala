@@ -46,7 +46,7 @@ class OLSRegressionDense(xColumnNames: Array[String],
   /*
  This must be lazy, because the AVOVATable class itself creates an instance of this object, but without looking
    at its anova results. If this weren't lazy, it will create an loop of object creation,
-   where OLSRegression -> ANOVATable -> OLSRegression -> ...
+   where OLSRegression -> ANOVATable -> OLSRegression -> ANOVATable -> ...
  */
   lazy val anovaTable: ANOVATableDense = new ANOVATableDense(this)
 

@@ -35,7 +35,7 @@ class Table(val table: Vector[Vector[Any]]) {
     bw.close()
   }
   
-  def printTable {
+  def printTable(): Unit = {
     for (row <- table.dropRight(table.size - 5)) {
       row.dropRight(1).foreach(entry => print(entry + "\t"))
       println(row.last)
@@ -53,9 +53,9 @@ class Table(val table: Vector[Vector[Any]]) {
     newMap
   }
   
-  lazy val printNames = (i: List[String]) => {
+  lazy val printNames: List[String] => Unit = (i: List[String]) => {
     i.size match {
-      case 2 => print(i(0) + " and " + i(1))
+      case 2 => print(i.head + " and " + i(1))
       case _ => {
         i.dropRight(1).foreach(x => print(x + ", "))
         print("and " + i.last)
@@ -63,7 +63,7 @@ class Table(val table: Vector[Vector[Any]]) {
     }
   }
   
-  lazy val nameIndexMap = getColumnNames.zipWithIndex.toMap
+  lazy val nameIndexMap:Map[String, Int] = getColumnNames.zipWithIndex.toMap
   
   def filterRedundantColumns: Table = {
 
@@ -122,17 +122,17 @@ class Table(val table: Vector[Vector[Any]]) {
     val rowMap = this.createRowMap
     
     // This is a closure (free variable is rowMap)
-    val createRowFunc = (i: String) => (i +: rowMap(i)).toVector
+    val createRowFunc = (i: String) => i +: rowMap(i)
     /*
      * Check to be sure that the samples present in this table match
      *   the samples provided in the input list.
      * The "Sample" column name itself is filtered out when this comparison
      *   is made.
      */
-    val tablesRowNames = rowMap.keys.filter(_ != "Sample").toList.sorted
+    val tablesRowNames = rowMap.keys.filter(_ != "Sample").toVector.sorted
     if (tablesRowNames == sampleOrder.sorted) {
       val outputRows = ("Sample" +: sampleOrder).map(createRowFunc)
-      return new Table(outputRows)
+      new Table(outputRows)
     }
     else {
       throw new Exception("Samples do not match between the input tables")
@@ -151,10 +151,10 @@ class Table(val table: Vector[Vector[Any]]) {
       filtered.map(_._1)
     }
     
-    val filtered = for (i <- 0 until table.length) yield {
+    val filtered = for (i <- table.indices) yield {
       filterColumn(table(i), columns)
     }
-    return new Table(filtered.toVector)
+    new Table(filtered.toVector)
   }
   
   /** Returns a collection of the column names, except for the first column */
@@ -188,7 +188,7 @@ class Table(val table: Vector[Vector[Any]]) {
  
   def createRowMap: Map[String, Vector[Any]] = {
     // Make map where rowName -> vector of rows items (excluding the name itself)
-    val rowMap = this.table.drop(1).map(x => x(0).toString() -> x.drop(1)).toMap
+    val rowMap = this.table.drop(1).map(x => x(0).toString -> x.drop(1)).toMap
     // The header row itself is added, with Sample added as the key
     rowMap + ("Sample" -> this.table(0).drop(1))
   }

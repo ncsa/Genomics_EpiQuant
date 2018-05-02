@@ -8,12 +8,14 @@ import scala.collection.mutable.ArrayBuffer
 class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
 
   /*
+  Note: This ANOVA table uses SS type III
+
   Building the anova table
             df          SS      MS      F*    p-value
-  error     n - 1 - 3                   --    --
   x1        1
   x2        1
   x3        1
+  error     n - 1 - 3                   --    --
   Total     n - 1
 
   SS(x1) = SS(x1,x2,x3) - SS(x2,x3)
@@ -23,18 +25,14 @@ class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
 
   F* = MS_marker_effect / MS_error
 
-
   Currently calculates SS and MS correctly when there is only 1 predictor, but not otherwise
 
   */
 
-  private val SST = regression.SST
-  private val dof_error = regression.DoF_error
-  private val dof_model = regression.DoF_model
-  private val dof_total = regression.N - 1
-
+  // VALIDATED
   def FStatisticToPValue(F: Double, df_num: Int, df_denom: Int): Double = {
-    1 - new FDistribution(df_num, df_denom).cdf(math.abs(F)) * 2
+    val FDist = new FDistribution(df_num, df_denom)
+    1 - FDist.cdf(F)
   }
 
   /**
@@ -50,7 +48,7 @@ class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
     new DenseMatrix(m.rows, m.cols - 1, values.toArray)
   }
 
-  private def createANOVAPredictorRow(columnIndex: Int): ANOVARow = {
+  private def createANOVAPredictorRow(columnIndex: Int, anovaErrorRow: ANOVARow): ANOVARow = {
 
     val sampleName = regression.xColumnNames(columnIndex)
     // In the future, this could be changed to determine if multiple columns are under the same category
@@ -70,10 +68,13 @@ class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
       new OLSRegressionDense(xColumnNamesAllButOne, regression.yColumnName, xsAllButOne, regression.Y)
     }
 
-    val SS = regression.total_SS_model - regressionAllButOne.total_SS_model
+    val SS = regression.SS_model - regressionAllButOne.SS_model
     val MS = SS / df
-    val F =  MS / regression.total_MS_model
-    val p_value = FStatisticToPValue(F, df, regression.DoF_model)
+    val F =  MS / anovaErrorRow.MS
+
+
+
+    val p_value = FStatisticToPValue(F, df, anovaErrorRow.df)
 
     ANOVARow(sampleName, df, SS, MS, Option(F), Option(p_value))
   }
@@ -81,23 +82,25 @@ class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
   // VERIFIED
   private val anovaErrorRow = {
     val SS = regression.RSS
-    ANOVARow("Error", dof_error, SS, SS / dof_error, None, None)
+    ANOVARow("Error", regression.DoF_error, SS, SS / regression.DoF_error, None, None)
   }
 
   private val anovaTotalRow = {
     val SS = regression.SST
     val F = regression.F_statistic_model
-    val p_value = FStatisticToPValue(F, dof_model, regression.DoF_error)
-    ANOVARow("Total", dof_total, SS, SS / dof_model, Option(F), Option(p_value))
+
+    val dof_total = regression.N - 1
+
+    val p_value = FStatisticToPValue(F, regression.DoF_model, regression.DoF_error)
+    ANOVARow("Total", dof_total, SS, SS / regression.DoF_model, Option(F), Option(p_value))
   }
 
   lazy val table: Vector[ANOVARow] = {
-    val arrayBuffer: ArrayBuffer[ANOVARow] = ArrayBuffer(anovaErrorRow)
+    val predictorRows: Vector[ANOVARow] = {
+      (0 until regression.Xs.cols).map(i => createANOVAPredictorRow(i, anovaErrorRow)).toVector
+    }
 
-    for (i <- 0 until regression.Xs.cols) { arrayBuffer += createANOVAPredictorRow(i) }
-    arrayBuffer += anovaTotalRow
-
-    arrayBuffer.toVector
+    predictorRows :+ anovaErrorRow :+ anovaTotalRow
   }
 
   private def anovaRowToString(row: ANOVARow): String = {

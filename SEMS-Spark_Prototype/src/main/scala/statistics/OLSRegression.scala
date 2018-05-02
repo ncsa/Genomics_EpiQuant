@@ -56,7 +56,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   
   // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values
   protected def replaceZero(x: Double): Double = if (x == 0.0) 0.000001 else x
-  
+
   val meanY: Double = sum(Y) / Y.length
   lazy val N: Int = Y.size
   
@@ -97,6 +97,8 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   
   /**
    * SS Model
+    * *
+    *  Also called SS Reg (Sum of Squares due to regression)
    * 
    * SS_model = sumOf(y_hat - mean_y)^2
    */
@@ -105,8 +107,8 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    * NEEDS VERIFICATION
    ***************/
     
-  lazy val total_SS_model: Double = sumOfSquared(fittedValues - meanY)
-  lazy val total_MS_model: Double = total_SS_model / DoF_model
+  lazy val SS_model: Double = sumOfSquared(fittedValues - meanY)
+  lazy val MS_model: Double = SS_model / DoF_model
   
   lazy val MS_error: Double = RSS / DoF_error
   
@@ -152,7 +154,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    *    http://onlinelibrary.wiley.com/doi/10.1111/j.1541-0420.2008.00989.x/full
    */
   
-  lazy val SST: Double = RSS + total_SS_model
+  lazy val SST: Double = RSS + SS_model
   
   // Verified
   lazy val R_squared: Double = 1 - RSS / SST
@@ -164,7 +166,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   /**
    * F statistic for the model = MS_model / MS_error
    */
-  lazy val F_statistic_model: Double = total_MS_model / MS_error
+  lazy val F_statistic_model: Double = MS_model / MS_error
 
   /**
    * The p-value of the model
