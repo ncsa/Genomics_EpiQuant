@@ -27,13 +27,15 @@ class SEAMSDenseTest {
   
   val stepDataRDD = spark.sparkContext.parallelize(stepDataX)
 
-  @Test def createPairwiseListTest() {
+  @Test
+  def createPairwiseListTest() {
     val actual = SEAMSDense.createPairwiseList(List("x1","x2", "x3"))
     val expected = Seq(("x1", "x2"), ("x1", "x3"), ("x2", "x3"))
     assertEquals(expected, actual)
   }
 
-  @Test def createPairwiseColumnTest() {
+  @Test
+  def createPairwiseColumnTest() {
     val actual = SEAMSDense.createPairwiseColumn(("x1", "x2"), broadcastXTable)
     val expected = ("x1_x2",
                     DenseVector(182.0, 29.0, 616.0, 31.0, 108.0, 987.0, 40.0, 726.0, 680.0)
@@ -41,7 +43,8 @@ class SEAMSDenseTest {
     assertEquals(expected, actual)
   }
 
-  @Test def performStepsTest_simple() {
+  @Test
+  def performStepsTest_simple() {
     // Tests whether performSteps agrees with the output generated from an R script
     // In this case, there are no entries that will be skipped, i.e. their are no cases
     // where a term is added and later removed from the model
@@ -91,7 +94,8 @@ class SEAMSDenseTest {
 		*/
   }
 
-  @Test def performStepsTest_skipped() {
+  @Test
+  def performStepsTest_skipped() {
      /*  This tests two things:
      *    1. If a previously added term is no longer significant when another term is added,
      *         it is removed from the added_prev collection and placed in the skipped category
@@ -147,7 +151,8 @@ class SEAMSDenseTest {
 		*/
   }
   
-   @Test def performStepsTest_skippedReturned() {
+   @Test
+   def performStepsTest_skippedReturned() {
      /*
      * This tests that items in the skipped category are returned to the not_added collection after
      *   one iteration

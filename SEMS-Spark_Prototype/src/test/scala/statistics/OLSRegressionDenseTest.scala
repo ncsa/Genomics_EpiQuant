@@ -10,7 +10,8 @@ object OLSRegressionDenseTest {
   var simpleReg: OLSRegression = _
   var multiReg: OLSRegression = _
 
-  @BeforeClass def initialSetup(): Unit = {
+  @BeforeClass
+  def initialSetup(): Unit = {
 
     /*
      *  We found that if we use really small data sets (N < 5) some calculations give results that do not match
@@ -103,7 +104,8 @@ SST = 2247.50
 
 */
   
-  @Test def simpleCoefficientsTest(): Unit = {
+  @Test
+  def simpleCoefficientsTest(): Unit = {
     val coefficients = OLSRegressionDenseTest.simpleReg.coefficients
     
     // Two estimates should be present: one for the slope and one for the intercept
@@ -115,7 +117,8 @@ SST = 2247.50
     assertEquals(16.28041, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def simpleStandardErrorTest(): Unit = {
+  @Test
+  def simpleStandardErrorTest(): Unit = {
     val stdErrors = OLSRegressionDenseTest.simpleReg.standardErrors
     
     assertEquals(stdErrors.length, 2)
@@ -126,7 +129,8 @@ SST = 2247.50
     assertEquals(3.59851, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def simpleTStatisticTest(): Unit = {
+  @Test
+  def simpleTStatisticTest(): Unit = {
     val tStats = OLSRegressionDenseTest.simpleReg.tStatistics
     
     assertEquals(tStats.length, 2)
@@ -137,7 +141,8 @@ SST = 2247.50
     assertEquals(4.524, intercept, 0.001)
   }
   
-  @Test def simplePValueTest(): Unit = {
+  @Test
+  def simplePValueTest(): Unit = {
     val pVals = OLSRegressionDenseTest.simpleReg.pValues
     
     assertEquals(pVals.length, 2)
@@ -148,23 +153,30 @@ SST = 2247.50
     assertEquals(0.000102, intercept, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def simpleRSquaredTest(): Unit = {
+  @Test
+  def simpleRSquaredTest(): Unit = {
     assertEquals(0.002112, OLSRegressionDenseTest.simpleReg.R_squared, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def simpleAdjustedRSquaredTest(): Unit = {
+  @Test
+  def simpleAdjustedRSquaredTest(): Unit = {
     assertEquals(-0.03353, OLSRegressionDenseTest.simpleReg.adjusted_R_squared, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def simpleLogLikelihoodTest(): Unit = {
+  @Test
+  def simpleLogLikelihoodTest(): Unit = {
     assertEquals(-107.2821, OLSRegressionDenseTest.simpleReg.log_likelihood, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def simpleAICTest(): Unit =  assertEquals(220.5642, OLSRegressionDenseTest.simpleReg.AIC, 0.0001)
-  @Test def simpleBICTest(): Unit = assertEquals(224.7678, OLSRegressionDenseTest.simpleReg.BIC, 0.0001)
+  @Test
+  def simpleAICTest(): Unit =  assertEquals(220.5642, OLSRegressionDenseTest.simpleReg.AIC, 0.0001)
+  @Test
+  def simpleBICTest(): Unit = assertEquals(224.7678, OLSRegressionDenseTest.simpleReg.BIC, 0.0001)
 
-  @Test def simpleSumOfSquaredResidualsTest(): Unit = assertEquals(2242.75, OLSRegressionDenseTest.simpleReg.RSS, 0.01)
-  @Test def simpleSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.simpleReg.SST, 0.01)
+  @Test
+  def simpleSumOfSquaredResidualsTest(): Unit = assertEquals(2242.75, OLSRegressionDenseTest.simpleReg.RSS, 0.01)
+  @Test
+  def simpleSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.simpleReg.SST, 0.01)
 
 
   /*
@@ -224,7 +236,8 @@ Add up Sum Sq column to get SST
 SST = 2247.50
    */
   
-  @Test def multiCoefficientsTest(): Unit = {
+  @Test
+  def multiCoefficientsTest(): Unit = {
     val coefficients = OLSRegressionDenseTest.multiReg.coefficients
     
     // Four estimates should be present: three slopes and one for the intercept
@@ -240,7 +253,8 @@ SST = 2247.50
     assertEquals(16.830240, intercept, OLSRegressionDenseTest.DELTA)
   }
   
-  @Test def multiStandardErrorTest(): Unit = {
+  @Test
+  def multiStandardErrorTest(): Unit = {
     val stdErr = OLSRegressionDenseTest.multiReg.standardErrors
     
     assertEquals(stdErr.length, 4)
@@ -255,7 +269,8 @@ SST = 2247.50
     assertEquals(5.898178, intercept, OLSRegressionDenseTest.DELTA)
   }
     
-  @Test def multiTStatisticTest():Unit = {
+  @Test
+  def multiTStatisticTest():Unit = {
     val tStats = OLSRegressionDenseTest.multiReg.tStatistics
     
     assertEquals(tStats.length, 4)
@@ -270,7 +285,8 @@ SST = 2247.50
     assertEquals(2.853, intercept, 0.001)
   }
   
-  @Test def multiPValueTest():Unit = {
+  @Test
+  def multiPValueTest():Unit = {
     val pVals = OLSRegressionDenseTest.multiReg.pValues
     
     assertEquals(pVals.length, 4)
@@ -285,21 +301,28 @@ SST = 2247.50
     assertEquals(0.00837, intercept, OLSRegressionDenseTest.DELTA)
   }
 
-  @Test def multiRSquaredTest(): Unit = assertEquals(0.00278, OLSRegressionDenseTest.multiReg.R_squared, 0.0001)
+  @Test
+  def multiRSquaredTest(): Unit = assertEquals(0.00278, OLSRegressionDenseTest.multiReg.R_squared, 0.0001)
 
-  @Test def multiAdjustedRSquaredTest(): Unit = {
+  @Test
+  def multiAdjustedRSquaredTest(): Unit = {
     assertEquals(-0.1123, OLSRegressionDenseTest.multiReg.adjusted_R_squared, 0.0001)
   }
 
-  @Test def multiLogLikelihoodTest(): Unit = {
+  @Test
+  def multiLogLikelihoodTest(): Unit = {
     assertEquals(-107.2721, OLSRegressionDenseTest.multiReg.log_likelihood, 0.0001)
   }
 
-  @Test def multiAICTest(): Unit = assertEquals(224.5441, OLSRegressionDenseTest.multiReg.AIC, 0.0001)
-  @Test def multiBICTest(): Unit = assertEquals(231.5501, OLSRegressionDenseTest.multiReg.BIC, 0.0001)
+  @Test
+  def multiAICTest(): Unit = assertEquals(224.5441, OLSRegressionDenseTest.multiReg.AIC, 0.0001)
+  @Test
+  def multiBICTest(): Unit = assertEquals(231.5501, OLSRegressionDenseTest.multiReg.BIC, 0.0001)
 
-  @Test def multiSumOfSquaredResidualsTest(): Unit = assertEquals(2241.25, OLSRegressionDenseTest.multiReg.RSS, 0.01)
-  @Test def multiSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.multiReg.SST, 0.01)
+  @Test
+  def multiSumOfSquaredResidualsTest(): Unit = assertEquals(2241.25, OLSRegressionDenseTest.multiReg.RSS, 0.01)
+  @Test
+  def multiSumOfSquaredTotalTest(): Unit = assertEquals(2247.50, OLSRegressionDenseTest.multiReg.SST, 0.01)
 
 
 }
