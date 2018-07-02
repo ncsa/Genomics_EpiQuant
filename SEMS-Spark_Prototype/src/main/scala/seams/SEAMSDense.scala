@@ -49,7 +49,7 @@ object SEAMSDense extends SEAMS {
     (combinedName, DenseVector(newVals:_*))
   }
 
-  /*
+  /**
    * 1. Broadcast the original table throughout the cluster
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
