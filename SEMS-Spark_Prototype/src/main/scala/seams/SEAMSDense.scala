@@ -144,8 +144,7 @@ object SEAMSDense extends SEAMS {
     val addedPrevValMap = collections.added_prev.toVector.map(name => {
                             Tuple2(name,
                                    /* Although lookup returns a Collection, in case the key is found on multiple
-                                    *   partitions, we know that there is only one. We just grab it with the (0)
-                                    *   indexing
+                                    *   partitions, we know that there is only one. We just grab it with head
                                     */
                                    snpDataRDD.lookup(name).head
                                   )

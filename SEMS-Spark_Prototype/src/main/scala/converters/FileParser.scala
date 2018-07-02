@@ -17,5 +17,5 @@ abstract class FileParser() {
   def saveParsedFile()
   
   /** Returns the full path to the output file */
-  def getOutputPath(): String
+  def getOutputPath: String
 }
