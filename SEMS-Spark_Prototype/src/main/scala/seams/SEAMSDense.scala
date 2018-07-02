@@ -49,7 +49,7 @@ object SEAMSDense extends SEAMS {
     (combinedName, DenseVector(newVals:_*))
   }
 
-  /*
+  /**
    * 1. Broadcast the original table throughout the cluster
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
@@ -144,8 +144,7 @@ object SEAMSDense extends SEAMS {
     val addedPrevValMap = collections.added_prev.toVector.map(name => {
                             Tuple2(name,
                                    /* Although lookup returns a Collection, in case the key is found on multiple
-                                    *   partitions, we know that there is only one. We just grab it with the (0)
-                                    *   indexing
+                                    *   partitions, we know that there is only one. We just grab it with head
                                     */
                                    snpDataRDD.lookup(name).head
                                   )

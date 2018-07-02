@@ -27,6 +27,7 @@ case class ANOVARow(sampleName: String,
 abstract class ANOVATable {
 
   val table: Vector[ANOVARow]
+  val summaryString: String
   def printTable(): Unit
 
 }
