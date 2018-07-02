@@ -94,18 +94,19 @@ trait SEAMS extends Serializable {
     val totalStartTime = System.nanoTime()
     
     val snpData = readHDFSFile(genotypeFile, spark.sparkContext)
-    val phenoData = readHDFSFile(phenotypeFile,spark.sparkContext)
+    val phenoData = readHDFSFile(phenotypeFile, spark.sparkContext)
 
     if (phenoData.sampleNames != snpData.sampleNames) {
       throw new Error("Sample order did not match between the SNP and Phenotype input files")
     }
 
     // Broadcast original SNP_Phenotype map
-    val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] = spark.sparkContext.broadcast(snpData.dataPairs.toMap)
+    val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
+      spark.sparkContext.broadcast(snpData.dataPairs.toMap)
     
     // Spread pairwise Vector across cluster
     val pairwiseCombinations = createPairwiseList(snpData.dataNames)
-    
+
     val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
 
     // Parallelize the original table into an RDD
@@ -113,12 +114,12 @@ trait SEAMS extends Serializable {
 
     // Create the pairwise combinations across the cluster
     val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-    
+
     val storageLevel = {
       if (serialization) StorageLevel.MEMORY_AND_DISK_SER 
       else StorageLevel.MEMORY_AND_DISK
     }
-    
+
     val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
 
     val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
@@ -126,10 +127,15 @@ trait SEAMS extends Serializable {
 
     // The :_* unpacks the contents of the array as input to the hash set
     val snpNames: HashSet[String] = HashSet(fullSnpRDD.keys.collect(): _*)
+
+    // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
+    //   All SNPs start in the not_added category
     val initialCollections = new StepCollections(not_added = snpNames)
 
     /*
      *  For each phenotype, build a model, println and save the results
+     *
+     *  TODO This loops through each phenotype in series and creates a model. Find a way to do this in parallel
      */
     for (phenotype <- phenotypeNames) {
       val startTime = System.nanoTime()
@@ -141,11 +147,15 @@ trait SEAMS extends Serializable {
 
       val timeString = constructTimeString(startTime, endTime)
       val summaryString = bestReg.summaryString
-      
+      val anovaSummaryString = bestReg.anovaTable.summaryString
+
+
+      // Include both the standard R-like regression output and the ANOVA table style output
       val output = Array(timeString,
                          "Genotype File: " + genotypeFile,
                          "Phenotype File: " + phenotypeFile + "\n",
-                         summaryString
+                         summaryString + "\n",
+                         anovaSummaryString
                         )
       
       // Print

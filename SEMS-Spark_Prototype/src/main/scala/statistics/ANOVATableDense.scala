@@ -123,8 +123,13 @@ class ANOVATableDense(regression: OLSRegressionDense) extends ANOVATable {
     outString.toString()
   }
 
+  val summaryString: String = {
+    val headerString = "-\tdf\tSS\tMS\tF"
+    val rowStrings: Vector[String] = table.map(row => anovaRowToString(row))
+    (headerString +: rowStrings).mkString("\n").toString
+  }
+
   def printTable(): Unit = {
-    println("-\tdf\tSS\tMS\tF")
-    table.foreach(row => println(anovaRowToString(row)) )
+    println(summaryString)
   }
 }
