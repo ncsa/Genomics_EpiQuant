@@ -161,7 +161,7 @@ trait SEAMS extends Serializable {
       // Print
       output.foreach(println)
 
-      // Save to file      
+      // Save to file
       spark.sparkContext.parallelize(output, 1)
                         .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
     }
