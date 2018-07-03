@@ -1,5 +1,20 @@
 # SEMS Spark: RDD Prototype
 
+## Installation
+
+git clone this repo
+
+cd into the directory that contains the pom.xml file
+
+```
+mvn clean
+mvn compile
+mvn install
+```
+
+In target, the jar will be present.
+Run with java -jar <jar location>
+
 ## Background
 
 Computing the two-way interactions between terms when detecting epistasis can become computationally and memory intensive very quickly. However, because the SEMS process can be easily implemented in an iterative map-reduce style, it naturally lends itself to the Apache Spark platform.
