@@ -35,7 +35,7 @@ trait SPAEML extends Serializable {
                           ): (String, DenseVector[Double])
   
   /*
-   * 1. Broadcast the original table throughout the cluster
+   * 1. Broadcast the original SNP table throughout the cluster
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
    * 4. Perform all of the regressions in a Map and Reduce style
