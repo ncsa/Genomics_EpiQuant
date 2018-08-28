@@ -1,0 +1,5 @@
+/bin/
+/target/
+.cache-main
+.cache-tests
+.DS_Store
