@@ -11,9 +11,9 @@ import breeze.linalg.DenseMatrix
 class DenseFileData(sampleNames: Vector[String], dataPairs: Vector[(String, DenseVector[Double])])
   extends FileData(sampleNames, dataPairs)
 
-class SEAMSDense {}
+class SPAEMLDense {}
 
-object SEAMSDense extends SEAMS {
+object SPAEMLDense extends SPAEML {
 
   // Implicit function needed for the "flatten" method to work on a DenseVector
   implicit val DenseVector2ScalaVector: DenseVector[Double] => Vector[Double] = (s: DenseVector[Double]) => s.toScalaVector

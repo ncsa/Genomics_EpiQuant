@@ -14,7 +14,7 @@ import org.apache.spark.storage.StorageLevel
 class SparseFileData(val sampleNames: Vector[String], val dataPairs: Vector[(String, SparseVector[Double])]) 
   extends FileData(sampleNames, dataPairs)
 
-object SEAMSSparse extends SEAMS {
+object SPAEMLSparse extends SPAEML {
  
   /** Reads in a file from HDFS converted previously with the ConvertFormat tool */
   def readHDFSFile(filePath: String, spark: SparkContext): SparseFileData = {

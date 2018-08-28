@@ -7,7 +7,7 @@ import org.junit.Assert._
 import org.junit._
 import breeze.linalg.DenseVector
 
-class SEAMSDenseTest {
+class SPAEMLDenseTest {
   /** Maximum acceptable difference between expected and actual values used in Assert statements */
   final val DELTA = 1e-5
   
@@ -29,14 +29,14 @@ class SEAMSDenseTest {
 
   @Test
   def createPairwiseListTest() {
-    val actual = SEAMSDense.createPairwiseList(List("x1","x2", "x3"))
+    val actual = SPAEMLDense.createPairwiseList(List("x1","x2", "x3"))
     val expected = Seq(("x1", "x2"), ("x1", "x3"), ("x2", "x3"))
     assertEquals(expected, actual)
   }
 
   @Test
   def createPairwiseColumnTest() {
-    val actual = SEAMSDense.createPairwiseColumn(("x1", "x2"), broadcastXTable)
+    val actual = SPAEMLDense.createPairwiseColumn(("x1", "x2"), broadcastXTable)
     val expected = ("x1_x2",
                     DenseVector(182.0, 29.0, 616.0, 31.0, 108.0, 987.0, 40.0, 726.0, 680.0)
                    )
@@ -53,7 +53,7 @@ class SEAMSDenseTest {
     val not_added_init = HashSet() ++ Vector("x1", "x2", "x3", "x4")
     val initial_collection = new StepCollections(not_added = not_added_init)
     
-    val reg = SEAMSDense.performSteps(spark.sparkContext,
+    val reg = SPAEMLDense.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",
@@ -114,7 +114,7 @@ class SEAMSDenseTest {
     val added_prev_init = HashSet() ++ Vector("x3")
     val initial_collection = StepCollections(not_added = not_added_init, added_prev = added_prev_init)
     
-    val reg = SEAMSDense.performSteps(spark.sparkContext,
+    val reg = SPAEMLDense.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",
@@ -166,7 +166,7 @@ class SEAMSDenseTest {
                                                  skipped = skipped_init
                                                 )
     
-    val reg = SEAMSDense.performSteps(spark.sparkContext,
+    val reg = SPAEMLDense.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",

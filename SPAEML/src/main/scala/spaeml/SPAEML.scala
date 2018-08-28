@@ -23,7 +23,7 @@ abstract class FileData(val sampleNames: Vector[String],
   lazy val dataNames: Vector[String] = dataPairs.map(_._1)
 }
 
-trait SEAMS extends Serializable {
+trait SPAEML extends Serializable {
   
   /*
    * ABSTRACT FUNCTIONS
