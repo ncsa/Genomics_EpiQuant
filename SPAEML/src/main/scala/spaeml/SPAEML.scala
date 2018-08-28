@@ -134,8 +134,6 @@ trait SPAEML extends Serializable {
 
     /*
      *  For each phenotype, build a model, println and save the results
-     *
-     *  TODO This loops through each phenotype in series and creates a model. Find a way to do this in parallel
      */
     for (phenotype <- phenotypeNames) {
       val startTime = System.nanoTime()
