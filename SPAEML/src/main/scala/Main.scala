@@ -12,7 +12,7 @@ object Main {
         // pass all arguments to ConvertFormat except for the program name itself
         ConvertFormat.launch(args.drop(1))
       }
-      else if ( List("SEMS", "StepwiseModelSelection").contains(program) ) {
+      else if ( List("SEMS", "SEAMS", "SPAEML", "StepwiseModelSelection").contains(program) ) {
         // pass all arguments to StepwiseModelSelection except for the program name itself
         StepwiseModelSelection.launch(args.drop(1))
       }

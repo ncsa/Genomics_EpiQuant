@@ -1,6 +1,6 @@
 import java.io.File
 import scopt._
-import seams._
+import spaeml._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
