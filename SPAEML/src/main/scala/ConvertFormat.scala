@@ -1,4 +1,3 @@
-import scopt._
 import java.io.File
 import converters._
 
@@ -77,9 +76,7 @@ object ConvertFormat {
     parsed match {
 
       // Handle a case where there is something wrong with the input arguments
-      case None => {
-        System.err.println("\nError: Invalid/incomplete arguments")
-      }
+      case None => System.err.println("\nError: Invalid/incomplete arguments")
 
       // If there is a valid set of arguments presented
       case Some(config) => {

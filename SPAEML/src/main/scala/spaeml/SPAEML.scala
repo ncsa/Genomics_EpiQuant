@@ -1,7 +1,7 @@
 package spaeml
   
 import statistics._
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
 import org.apache.spark.broadcast._
@@ -13,9 +13,9 @@ import org.apache.spark.storage.StorageLevel
  *   where an X is included under high p-value, then skipped, then included again, ... and this goes on forever 
  */
 
-case class StepCollections(not_added: HashSet[String],
-                           added_prev: HashSet[String] = HashSet(),
-                           skipped: HashSet[String] = HashSet())
+case class StepCollections(not_added: mutable.HashSet[String],
+                           added_prev: mutable.HashSet[String] = mutable.HashSet(),
+                           skipped: mutable.HashSet[String] = mutable.HashSet())
 
 abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
@@ -76,11 +76,10 @@ trait SPAEML extends Serializable {
     val seconds = (endTime - startTime) / 1e9
     val minutes = seconds / 60.0
     val hours = minutes / 60.0
-    val days = hours / 24.0
-      
+
     val getTimeString = (s: String, d: Double) => "Calculation time (in " + s + "): " + d.toString + "\n"
     val timeString = getTimeString("seconds", seconds) + getTimeString("minutes", minutes) + getTimeString("hours", hours)
-    return timeString
+    timeString
   }
   
   def performSEAMS(spark: SparkSession,
@@ -126,7 +125,7 @@ trait SPAEML extends Serializable {
     val phenotypeNames = phenoData.dataNames
 
     // The :_* unpacks the contents of the array as input to the hash set
-    val snpNames: HashSet[String] = HashSet(fullSnpRDD.keys.collect(): _*)
+    val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
 
     // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
     //   All SNPs start in the not_added category

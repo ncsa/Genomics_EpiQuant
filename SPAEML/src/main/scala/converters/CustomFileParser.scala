@@ -16,7 +16,7 @@ class CustomFileParser(filePath: File,
     if (transpose) filtered.transpose else filtered
   }
 
-  def saveParsedFile(outputPath: File) = {
+  def saveParsedFile(outputPath: File): Unit = {
     convertedTable.replaceTopLeftEntry.saveTableAsTSV(outputPath)
   }
 }

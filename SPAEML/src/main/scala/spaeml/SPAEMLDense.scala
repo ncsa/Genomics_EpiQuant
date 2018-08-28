@@ -109,7 +109,7 @@ object SPAEMLDense extends SPAEML {
         
         val newXVals: Array[Double] = xVals ++ inputSnp._2
         val newXValsAsMatrix = new DenseMatrix(numRows, numCols + 1, newXVals)
-        
+
         return Some(new OLSRegressionDense(newXColNames, phenotypeName, newXValsAsMatrix, yVals))
       } else {
         // Do not analyze this SNP
@@ -239,6 +239,7 @@ object SPAEMLDense extends SPAEML {
           val xValsMatrix: DenseMatrix[Double] = new DenseMatrix(numRows, numCols, flattenedXValues)
           
           addedPrevBroadcast.destroy()
+
           return new OLSRegressionDense(xColNames, phenotypeName, xValsMatrix, yVals)
         }
       } else {
