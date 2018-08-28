@@ -82,18 +82,18 @@ object StepwiseModelSelection {
         val spark = SparkSession
                       .builder
                       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-                      .appName("SEMS")
+                      .appName("SPAEML")
                       .master(parsed.get.sparkMaster)
                       .getOrCreate()
                      
         spark.sparkContext.setLogLevel(parsed.get.sparkLog)
-        
-        SEAMSDense.performSEAMS(spark,
-                                parsed.get.genotypeInput,
-                                parsed.get.phenotypeInput,
-                                parsed.get.output,
-                                parsed.get.threshold,
-                                parsed.get.serialization
+
+        SPAEMLDense.performSEAMS(spark,
+                                 parsed.get.genotypeInput,
+                                 parsed.get.phenotypeInput,
+                                 parsed.get.output,
+                                 parsed.get.threshold,
+                                 parsed.get.serialization
                                )
       }
     }  
