@@ -112,7 +112,7 @@ class SPAEMLDenseTest {
     //   skipped term) is returned
     val not_added_init = HashSet() ++ Vector("x1")
     val added_prev_init = HashSet() ++ Vector("x3")
-    val initial_collection = StepCollections(not_added = not_added_init, added_prev = added_prev_init)
+    val initial_collection = new StepCollections(not_added = not_added_init, added_prev = added_prev_init)
     
     val reg = SPAEMLDense.performSteps(spark.sparkContext,
                                         stepDataRDD,

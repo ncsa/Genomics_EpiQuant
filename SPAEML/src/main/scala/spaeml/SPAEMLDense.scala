@@ -55,7 +55,7 @@ object SPAEMLDense extends SPAEML {
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
    * 4. Perform all of the regressions in a Map and Reduce style
-   */  
+   */
   @tailrec
   def performSteps(spark: SparkContext,
                    snpDataRDD: rdd.RDD[(String, DenseVector[Double])],
@@ -86,6 +86,9 @@ object SPAEMLDense extends SPAEML {
     /** Returns the name of the most recently added term */
     val getNewestTermsName = (reg: OLSRegression) => reg.xColumnNames.last
 
+    /** */
+    val getNewestTermsValues = (reg: OLSRegression) => reg.lastXColumnsValues()
+
     /**
      * Returns a OLSRegression object if the inputSnp is in the NotAdded category
      *
@@ -97,9 +100,9 @@ object SPAEMLDense extends SPAEML {
                    ): Option[OLSRegressionDense] = {
       
       // If the inputSnp is in the not_added category
-      if ( collections.not_added.contains(inputSnp._1) ) {
+      if ( collections.getNotAdded.contains(inputSnp._1) ) {
         val yVals = broadcastPhenotypes.value(phenotypeName)
-        val xColNames = collections.added_prev.toArray
+        val xColNames = collections.getAddedPrev.toArray
         
         val numRows = yVals.length
         val numCols = xColNames.length
@@ -142,7 +145,7 @@ object SPAEMLDense extends SPAEML {
      * Since a broadcast cannot be updated, these need to be recreated at the beginning of each iteration
      *   as the SNPs included in the models change
      */
-    val addedPrevValMap = collections.added_prev.toVector.map(name => {
+    val addedPrevValMap = collections.getAddedPrev.toVector.map(name => {
                             Tuple2(name,
                                    /* Although lookup returns a Collection, in case the key is found on multiple
                                     *   partitions, we know that there is only one. We just grab it with head
@@ -156,12 +159,13 @@ object SPAEMLDense extends SPAEML {
     /*
      *  Step 1: find the best regression for those SNPs still under consideration
      */
+
     // Map generates all of the regression outputs, and reduce finds the best one
     val mappedValues: rdd.RDD[Option[OLSRegression]] = snpDataRDD.map(mapFunction(_, addedPrevBroadcast))
     val bestRegression: OLSRegression = reduceFunction(mappedValues)
 
     bestRegression.printSummary()
-    collections.skipped.foreach(x => print(x + ", "))
+    collections.getSkipped.foreach(x => print(x + ", "))
 
     // If the p-value of the newest term does not meet the threshold, return the prev_best_model
     if (getNewestTermsPValue(bestRegression) >= threshold) {
@@ -174,18 +178,14 @@ object SPAEMLDense extends SPAEML {
     else {
       val new_collections = collections.copy()
 
-      // Now that the regressions for this round have completed, return any entries in the skipped
-      //   category to the not_added category so they may be considered in subsequent iterations
-      new_collections.skipped.foreach(x => {
-        new_collections.skipped.remove(x)
-        new_collections.not_added.add(x)
-      })
+      // Now that the regressions for this round have been completed, return any entries in the skipped category to the
+      //   not added category
+      new_collections.getSkipped.foreach( x => new_collections.moveFromSkipped2NotAdded(x) )
 
-      /*
-       * Remove the newest term from the not_added category and put it in the added_prev category
-       */
-      new_collections.not_added.remove(getNewestTermsName(bestRegression))
-      new_collections.added_prev.add(getNewestTermsName(bestRegression))
+      // Remove the newest term from the not_added category and put it in the added_prev category
+      new_collections.moveFromNotAdded2AddedPrev(snpName = getNewestTermsName(bestRegression),
+                                                 snpValues = getNewestTermsValues(bestRegression)
+                                                 )
 
       /*
        * Step 2: Check to make sure none of the previously added terms are no longer significant
@@ -198,8 +198,7 @@ object SPAEMLDense extends SPAEML {
       namePValuePairs.foreach(pair => {
         if (pair._2 >= threshold) {
           // Remove this term from the prev_added collection, and move it to the skipped category
-          new_collections.added_prev.remove(pair._1)
-          new_collections.skipped.add(pair._1)
+          new_collections.moveFromAddedPrev2Skipped(pair._1)
         }
       })
         
@@ -207,7 +206,7 @@ object SPAEMLDense extends SPAEML {
           // from the BestRegression that is passed to the next iteration
       val entriesSkippedThisRound = namePValuePairs.filter(_._2 >= threshold).map(_._1)
       
-      if (new_collections.not_added.isEmpty) {
+      if (new_collections.getNotAdded.isEmpty) {
         /*
          * No more terms that could be added. Return the current best model, unless there are entries
          * in the skipped category.
@@ -218,11 +217,11 @@ object SPAEMLDense extends SPAEML {
          * If something is in the skipped category at this point it was added during this iteration.
          * and the "bestRegression" variable will still have that term included.
          */
-        if (new_collections.skipped.isEmpty) {return bestRegression}
+        if (new_collections.getSkipped.isEmpty) {return bestRegression}
         else {
           
           val newestXColName = bestRegression.xColumnNames.last
-          val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
+          val otherXColNames = new_collections.getAddedPrev.filterNot(_ == newestXColName).toArray
 
           // New x values: look up the previously added from the broadcast table, then include the values of
           //   the latest term to be added
@@ -254,7 +253,7 @@ object SPAEMLDense extends SPAEML {
           if (entriesSkippedThisRound.length > 0) {
             
             val newestXColName = bestRegression.xColumnNames.last
-            val otherXColNames = new_collections.added_prev.filterNot(_ == newestXColName).toArray
+            val otherXColNames = new_collections.getAddedPrev.filterNot(_ == newestXColName).toArray
           
             val nameInSkipped: (String => Boolean) = entriesSkippedThisRound.contains(_)
           
