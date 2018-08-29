@@ -16,7 +16,8 @@ class SPAEMLDense {}
 object SPAEMLDense extends SPAEML {
 
   // Implicit function needed for the "flatten" method to work on a DenseVector
-  implicit val DenseVector2ScalaVector: DenseVector[Double] => Vector[Double] = (s: DenseVector[Double]) => s.toScalaVector
+  implicit val DenseVector2ScalaVector: DenseVector[Double] => Vector[Double] =
+    (s: DenseVector[Double]) => s.toScalaVector
   
   /** Reads in a file from HDFS converted previously with the ConvertFormat tool */
   def readHDFSFile(filePath: String, spark: SparkContext): DenseFileData = {
@@ -30,7 +31,7 @@ object SPAEMLDense extends SPAEML {
       .toVector
     // Turns each data line into a tuple where (sampleName, DenseVector[values])
       // Drops the first column because that is the SNP name
-    // The :_* unpacks the collection's value to be passed to the SparseVector's constructor one at a time
+    // The :_* unpacks the collection's value to be passed to the DenseVector's constructor one at a time
     val dataTuples = dataLines.map(x => {
       Tuple2(x(0), 
              DenseVector( x.drop(1).map(_.toDouble):_* )

@@ -9,8 +9,11 @@ import breeze.linalg.DenseVector
 import org.apache.spark.storage.StorageLevel
 
 /*
- * Having a different threshold for the forward and backward steps can lead to oscillations
- *   where an X is included under high p-value, then skipped, then included again, ... and this goes on forever 
+ *
+ * RANDOM NOTE
+ *  (not 100 certain this is true; believed I saw evidence of this long ago. Need to reconsider)
+ *  Having a different threshold for the forward and backward steps can lead to oscillations
+ *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
 
 case class StepCollections(not_added: mutable.HashSet[String],
@@ -29,7 +32,7 @@ trait SPAEML extends Serializable {
    * ABSTRACT FUNCTIONS
    */
   
-  def readHDFSFile(filePath: String, sark: SparkContext): FileData
+  def readHDFSFile(filePath: String, spark: SparkContext): FileData
   def createPairwiseColumn(pair: (String, String),
                            broadMap: Broadcast[Map[String, DenseVector[Double]]]
                           ): (String, DenseVector[Double])
@@ -81,17 +84,43 @@ trait SPAEML extends Serializable {
     val timeString = getTimeString("seconds", seconds) + getTimeString("minutes", minutes) + getTimeString("hours", hours)
     timeString
   }
-  
-  def performSEAMS(spark: SparkSession,
-                  genotypeFile: String,
-                  phenotypeFile: String,
-                  outputFileDirectory: String,
-                  threshold: Double,
-                  serialization: Boolean
+
+  /**
+    * Read in the genotype and phenotype files, perform SPAEML model building, and write the resulting model to a file
+    *
+    *   Detailed steps:
+    *     1. Read in the data from the genotype and phenotype files (in the ".epiq" format, where the columns are
+    *        sample names and the rows are SNP names/phenotype names)
+    *
+    *     2. Make sure the sample names match up exactly between the two files (error out if not)
+    *     3. broadcast (send a read-only copy of) the original SNP data map (SNP_name -> [values]) to each executor
+    *
+    *     4. On the driver, compute all of the non-redundant pairwise combinations of the SNP_names, and spread those
+    *          name pairs across the cluster in an RDD
+    *
+    *     5. Across the cluster, compute the pairwise SNP combination RDD by using the SNP_name pair RDD and the data
+    *          from the SNP table that was broadcast to all of the executors (combined names are named <SNP_A>_<SNP_B>)
+    *
+    *     6. Spread the original SNP data table across the cluster as an RDD, then combine the original SNP RDD with
+    *          the pairwise SNP to create the fullSnpRDD (and set it to persist with the desired serialization level)
+    *
+    *     7. Broadcast the phenotype data map (Phenotype_name -> [values]) to each executor
+    *     8. Initialize the StepCollections case class with all of the SNP_names put in the "not_added" category
+    *
+    *     9. For each phenotype, call the performSteps function (which implementation depends on whether Dense or
+    *          Sparse vectors are used for the data. Currently, only SPAEML dense is implemented)
+    *
+    */
+  def performSPAEML(spark: SparkSession,
+                    genotypeFile: String,
+                    phenotypeFile: String,
+                    outputFileDirectory: String,
+                    threshold: Double,
+                    serialization: Boolean
                  ) {
     
     val totalStartTime = System.nanoTime()
-    
+
     val snpData = readHDFSFile(genotypeFile, spark.sparkContext)
     val phenoData = readHDFSFile(phenotypeFile, spark.sparkContext)
 
@@ -99,13 +128,40 @@ trait SPAEML extends Serializable {
       throw new Error("Sample order did not match between the SNP and Phenotype input files")
     }
 
-    // Broadcast original SNP_Phenotype map
+    /*
+     * From now on, the numbers are assumed to be in the same sample order between the genotypes and phenotypes
+     * (In other words, it assumes the samples names A,B,C,... N from the two tables below are in the same order)
+     *
+     *   (Original genotype file)               (Original phenotype file)
+     *
+     *   Sample SNP1 SNP2 SNP3 ... SNPM         Sample  Pheno1  Pheno2 ...
+     *   A      A1   A2   A3       AM           A       A_Ph1   A_Ph2
+     *   B      B1   B2   B3       BM           B       B_Ph1   B_Ph2
+     *   C      C1   C2   C3       CM           C       C_Ph1   C_Ph2
+     *   ...                                    ...
+     *   N      N1   N2   N3       NM           N       N_Ph1   N_PhN
+     *
+     *   Before this program is executed, the files are reformatted, and the columns and rows are transposed
+     *   (this makes reading the data into Spark easier, i.e. we can read in one SNP/phenotype entry per line)
+     *
+     *   The reformatted (".epiq" formatted) files
+     *      (A string called "Placeholder" is put in the top-left corner to make everything line up easily)
+     *
+     *   (genotype ".epiq" file)                  (phenotype ".epiq" file)
+     *   Placeholder A   B   C  ... N           Placeholder A      B      C     ... N
+     *   SNP1        A1  B1  C1     N1          Pheno1      A_Ph1  B_Ph1  C_Ph1     N_Ph1
+     *   SNP2        A2  B2  C2     N2          Pheno2      A_Ph2  B_Ph2  C_Ph2     N_Ph2
+     *   SNP3        A3  B3  C3     N3          ...
+     *   ...
+     *   SNPM        AM  BM  CM     NM
+     */
+
+    // Broadcast original SNP map where (SNP_name -> [SNP_values])
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
     
-    // Spread pairwise Vector across cluster
-    val pairwiseCombinations = createPairwiseList(snpData.dataNames)
-
+    // Spread Vector of pairwise SNP_name combinations across cluster
+    val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
     val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
 
     // Parallelize the original table into an RDD
@@ -121,6 +177,7 @@ trait SPAEML extends Serializable {
 
     val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
 
+    // Broadcast Phenotype map where (phenotype_name -> [values])
     val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
     val phenotypeNames = phenoData.dataNames
 

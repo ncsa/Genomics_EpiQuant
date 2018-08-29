@@ -88,7 +88,7 @@ object StepwiseModelSelection {
                      
         spark.sparkContext.setLogLevel(parsed.get.sparkLog)
 
-        SPAEMLDense.performSEAMS(spark,
+        SPAEMLDense.performSPAEML(spark,
                                  parsed.get.genotypeInput,
                                  parsed.get.phenotypeInput,
                                  parsed.get.output,
