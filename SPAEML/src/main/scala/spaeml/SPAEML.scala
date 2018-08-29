@@ -9,9 +9,9 @@ import breeze.linalg.DenseVector
 import org.apache.spark.storage.StorageLevel
 
 /*
- *
  * RANDOM NOTE
  *  (not 100 certain this is true; believed I saw evidence of this long ago. Need to reconsider)
+ *
  *  Having a different threshold for the forward and backward steps can lead to oscillations
  *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
@@ -42,7 +42,7 @@ trait SPAEML extends Serializable {
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
    * 4. Perform all of the regressions in a Map and Reduce style
-   */  
+   */
   def performSteps(spark: SparkContext,
                    snpDataRDD: rdd.RDD[(String, DenseVector[Double])],
                    broadcastPhenotypes: Broadcast[Map[String, DenseVector[Double]]],
