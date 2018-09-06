@@ -1,6 +1,7 @@
 package spaeml
   
 import statistics._
+
 import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
@@ -16,9 +17,6 @@ import org.apache.spark.storage.StorageLevel
  *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
 
-case class StepCollections(not_added: mutable.HashSet[String],
-                           added_prev: mutable.HashSet[String] = mutable.HashSet(),
-                           skipped: mutable.HashSet[String] = mutable.HashSet())
 
 abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
@@ -37,7 +35,7 @@ trait SPAEML extends Serializable {
                            broadMap: Broadcast[Map[String, DenseVector[Double]]]
                           ): (String, DenseVector[Double])
   
-  /*
+  /**
    * 1. Broadcast the original SNP table throughout the cluster
    * 2. Create and distribute a Vector of columnName pairs for the SNP table
    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
