@@ -28,13 +28,15 @@ class StepCollections(not_added: mutable.HashSet[String],
   /*
       Direction of flow of SNP names in StepCollections
 
-        not_added ---> added_prev ---> skipped
+             +>-----> added_prev ---->-+
+            /                            \
+        not_added                       skipped
            ^                             /
             \   (after one iteration)   /
              +<-----<-----<-----<-----<+
  */
 
-  val addedPrevValues: mutable.HashMap[String, breeze.linalg.Vector[Double]] = new mutable.HashMap()
+  val addedPrevValues: mutable.HashMap[String, breeze.linalg.DenseVector[Double]] = new mutable.HashMap()
 
   def getNotAdded: mutable.HashSet[String] = not_added
   def getAddedPrev: mutable.HashSet[String] = added_prev
@@ -45,7 +47,7 @@ class StepCollections(not_added: mutable.HashSet[String],
     to.add(snpName)
   }
 
-  def moveFromNotAdded2AddedPrev(snpName: String, snpValues: breeze.linalg.Vector[Double]): Unit = {
+  def moveFromNotAdded2AddedPrev(snpName: String, snpValues: breeze.linalg.DenseVector[Double]): Unit = {
     moveFrom(not_added, added_prev, snpName)
     addedPrevValues.put(snpName, snpValues)
   }

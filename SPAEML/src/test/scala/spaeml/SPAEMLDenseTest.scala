@@ -1,7 +1,7 @@
 package spaeml
 
 import org.apache.spark.broadcast.Broadcast
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 import org.apache.spark.sql._
 import org.junit.Assert._
 import org.junit._
@@ -50,7 +50,7 @@ class SPAEMLDenseTest {
     // where a term is added and later removed from the model
     
     // Initialize the collections case class by adding all of the variables to the not_added collection
-    val not_added_init = HashSet() ++ Vector("x1", "x2", "x3", "x4")
+    val not_added_init = mutable.HashSet() ++ Vector("x1", "x2", "x3", "x4")
     val initial_collection = new StepCollections(not_added = not_added_init)
     
     val reg = SPAEMLDense.performSteps(spark.sparkContext,
@@ -110,10 +110,13 @@ class SPAEMLDenseTest {
     // In addition, since there will be no others terms that can be added to the model and there
     //   will be an entry in the skipped category, this test whether the final model (without the
     //   skipped term) is returned
-    val not_added_init = HashSet() ++ Vector("x1")
-    val added_prev_init = HashSet() ++ Vector("x3")
+    val not_added_init = mutable.HashSet() ++ Vector("x1")
+    val added_prev_init = mutable.HashSet() ++ Vector("x3")
     val initial_collection = new StepCollections(not_added = not_added_init, added_prev = added_prev_init)
-    
+
+    // Since we start with a term in the added previously category, we must add its values to the added previously map
+    initial_collection.addedPrevValues.put("x3", broadcastXTable.value("x3"))
+
     val reg = SPAEMLDense.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
@@ -121,7 +124,8 @@ class SPAEMLDenseTest {
                                         initial_collection,
                                         0.05
                                        )
-    
+    println(reg.summaryString)
+
     assertEquals(Vector("x1"), reg.xColumnNames.toVector)
     assertEquals("x1", reg.xColumnNames.last)
 
@@ -160,8 +164,8 @@ class SPAEMLDenseTest {
      * This works by starting with x1 in the skipped category. So x2 will be added in the
      *   next iteration, provided that it has been removed from the skipped category
      */
-    val not_added_init = HashSet() ++ Vector("x1")
-    val skipped_init = HashSet() ++ Vector("x2")
+    val not_added_init = mutable.HashSet() ++ Vector("x1")
+    val skipped_init = mutable.HashSet() ++ Vector("x2")
     val initial_collection = new StepCollections(not_added = not_added_init,
                                                  skipped = skipped_init
                                                 )
@@ -195,13 +199,11 @@ class SPAEMLDenseTest {
 			x2 <- c(26, 29, 56, 31, 54, 47, 40, 66, 68)
 
 			summary(lm(y~x1))
-						
-			# Next iteration, after x2 in skipped is added back into consideration			
-			summary(lm(y~x1 + x2))
-			
 
-			summary(lm(y~x3 + x1))
-			# x1 will be added and x3 should be removed as it has a p-value of 0.6205
+			# Next iteration, after x2 in skipped is added back into consideration
+			summary(lm(y~x1 + x2))
+
+			# x2 will be added and that will be the final iteration
 
 		*/
   }
