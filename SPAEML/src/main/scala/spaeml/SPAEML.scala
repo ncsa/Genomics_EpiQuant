@@ -1,7 +1,6 @@
 package spaeml
   
 import statistics._
-
 import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
@@ -22,6 +21,26 @@ abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
                        ) {
   lazy val dataNames: Vector[String] = dataPairs.map(_._1)
+}
+
+object SPAEML {
+
+  def writeToFile(directoryPath: String, filename: String, content: String) {
+
+    import java.io._
+
+    val dir = new File(directoryPath)
+    if (!dir.exists()) dir.mkdir()
+
+    val fullPath = directoryPath + "/" + filename
+    val file = new File(fullPath)
+    if (!file.exists()) file.createNewFile()
+
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(content)
+    bw.close()
+  }
+
 }
 
 trait SPAEML extends Serializable {
@@ -190,17 +209,18 @@ trait SPAEML extends Serializable {
      *  For each phenotype, build a model, println and save the results
      */
     for (phenotype <- phenotypeNames) {
+
       val startTime = System.nanoTime()
-      
+
       val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast,
                                  phenotype, initialCollections, threshold, null, 1
                                 )      
+
       val endTime = System.nanoTime()
 
       val timeString = constructTimeString(startTime, endTime)
       val summaryString = bestReg.summaryString
       val anovaSummaryString = bestReg.anovaTable.summaryString
-
 
       // Include both the standard R-like regression output and the ANOVA table style output
       val output = Array(timeString,
@@ -214,16 +234,18 @@ trait SPAEML extends Serializable {
       output.foreach(println)
 
       // Save to file
-      spark.sparkContext.parallelize(output, 1)
-                        .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
+      SPAEML.writeToFile(outputFileDirectory, phenotype + ".summary", output.mkString("\n"))
+      //spark.sparkContext.parallelize(output, 1)
+      //                  .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
     }
     
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
-    println(totalTimeString)
+    //println(totalTimeString)
     
-    spark.sparkContext.parallelize(List(totalTimeString), 1)
-                        .saveAsTextFile(outputFileDirectory + "/total_time.log")
+    SPAEML.writeToFile(outputFileDirectory, "total_time.log", List(totalTimeString).mkString("\n"))
+    //spark.sparkContext.parallelize(List(totalTimeString), 1)
+    //                    .saveAsTextFile(outputFileDirectory + "/total_time.log")
   }
-  
+
 }
