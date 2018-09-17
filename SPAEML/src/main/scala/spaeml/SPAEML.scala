@@ -233,18 +233,15 @@ trait SPAEML extends Serializable {
       output.foreach(println)
 
       // Save to file
-      SPAEML.writeToFile(outputFileDirectory, phenotype + ".summary", output.mkString("\n"))
-      //spark.sparkContext.parallelize(output, 1)
-      //                  .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
+      spark.sparkContext.parallelize(output, 1)
+                        .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
     }
     
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
-    //println(totalTimeString)
-    
-    SPAEML.writeToFile(outputFileDirectory, "total_time.log", List(totalTimeString).mkString("\n"))
-    //spark.sparkContext.parallelize(List(totalTimeString), 1)
-    //                    .saveAsTextFile(outputFileDirectory + "/total_time.log")
+
+    spark.sparkContext.parallelize(List(totalTimeString), 1)
+                        .saveAsTextFile(outputFileDirectory + "/total_time.log")
   }
 
 }
