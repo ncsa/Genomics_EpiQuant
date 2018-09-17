@@ -17,7 +17,6 @@ import org.apache.spark.storage.StorageLevel
  *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
 
-
 abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
                        ) {
@@ -54,11 +53,11 @@ trait SPAEML extends Serializable {
   /*
    * CONCRETE FUNCTIONS
    */
-  
+
   protected def flattenArrayOfBreezeVectors(input: Array[breeze.linalg.Vector[Double]]): Array[Double] = {
-    input.flatMap(breezeVect => breezeVect.toDenseVector.toScalaVector)
+    input.flatMap(breezeVector => breezeVector.toDenseVector.toScalaVector)
   }
-                  
+
   /**
    * Create a non-redundant pairwise Vector of names from a vector of string inputs
    *
@@ -116,7 +115,7 @@ trait SPAEML extends Serializable {
                     threshold: Double,
                     serialization: Boolean
                  ) {
-    
+
     val totalStartTime = System.nanoTime()
 
     val snpData = readHDFSFile(genotypeFile, spark.sparkContext)
@@ -200,7 +199,6 @@ trait SPAEML extends Serializable {
       val timeString = constructTimeString(startTime, endTime)
       val summaryString = bestReg.summaryString
       val anovaSummaryString = bestReg.anovaTable.summaryString
-
 
       // Include both the standard R-like regression output and the ANOVA table style output
       val output = Array(timeString,

@@ -1,74 +1,79 @@
-import java.io.File
-import scopt._
 import spaeml._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.storage.StorageLevel
 
-case class InputConfig(sparkMaster: String = "",
-                       sparkLog: String = "INFO",
-                       genotypeInput: String = ".",
-                       phenotypeInput: String = ".",
-                       output: String = ".",
-                       threshold: Double = 0.05,
-                       serialization: Boolean = false
+case class InputConfig(
+                        genotypeInputFile: String = "",
+                        phenotypeInputFile: String = "",
+                        outputDirectoryPath: String = "",
+                        aws: Boolean = false,
+                        s3BucketPath: String = "",
+                        threshold: Double = 0.05,
+                        serialize: Boolean = false,
+                        sparkMaster: String = "YARN"
                       )
                       
 object StepwiseModelSelection {
-  
+
   private val argParser = new scopt.OptionParser[InputConfig]("StepwiseModelSelection") {
     head("StepwiseModelSelection")
 
     note("Required Arguments\n------------------")
-    
-    opt[String]("spark-master")
-      .required
-      .valueName("<string>")
-      .action( (x, c) => c.copy(sparkMaster = x) )
-    
+
     opt[String]('G', "genotypeInput")
       .required
       .valueName("<file>")
-      .action( (x, c) => c.copy(genotypeInput = x) )
-      .text("Path to the genotype file")
+      .action( (x, c) => c.copy(genotypeInputFile = x) )
+      .text("Path to the genotype input file")
     
     opt[String]('P', "phenotypeInput")
       .required
       .valueName("<file>")
-      .action( (x, c) => c.copy(phenotypeInput = x) )
-      .text("Path to the phenotype file")
+      .action( (x, c) => c.copy(phenotypeInputFile = x) )
+      .text("Path to the phenotype input file")
       
     opt[String]('o', "output")
       .required
       .valueName("<file>")
-      .action( (x, c) => c.copy(output = x) )
-      .text("Path to where the output file will be placed")
+      .action( (x, c) => c.copy(outputDirectoryPath = x) )
+      .text("Path to the output directory")
       
     note("\nOptional Arguments\n------------------")
+
+    opt[Unit]("aws")
+      .action( (_, c) => c.copy(aws = true) )
+      .text("Set this flag to run on AWS")
+
+    opt[Unit]("serialize")
+      .action( (_, c) => c.copy(serialize = true) )
+      .text("Set this flag to serialize data, which is space-efficient but CPU-bound")
+
+    opt[String]("bucket")
+        .valueName("<url>")
+        .action( (x, c) => c.copy(s3BucketPath = x) )
+        .text("Path to the S3 Bucket storing input and output files")
 
     opt[Double]("threshold")
       .optional
       .valueName("<number>")
       .action( (x, c) => c.copy(threshold = x) )
-      .text("The p-value threshold for the backward and forward steps: Defaults to 0.05")
-      
-    opt[String]("spark-log-level")
-      .optional
-      .valueName("WARN, INFO, DEBUG, etc.")
-      .action( (x, c) => c.copy(sparkLog = x) )
-      .text("Set sparks log verbosity: Defaults to INFO")
-      
-    opt[Boolean]("serialization")
-      .optional
-      .valueName("true or false")
-      .text("Will data be serialized. Defaults to false; if true, need less memory, but runs slower")
-      .action( (x, c) => c.copy(serialization = x) )
+      .text("The p-value threshold for the backward and forward steps (default=0.05)")
 
+    opt[String]("spark")
+        .valueName("<url>")
+        .action( (x, c) => c.copy(sparkMaster = x) )
+        .text("The master URL for Spark")
+
+    checkConfig( c =>
+      if (c.aws && c.s3BucketPath.isEmpty) failure("If the '--aws' flag is used, a S3 bucket path must be specified")
+      else if (!c.aws && c.sparkMaster == "YARN") failure("If the '--aws' flag is not used, a spark master must be specified")
+      else success
+    )
   }
   
   def launch(args: Array[String]) {
     
     val parsed = argParser.parse(args, InputConfig())
-      
+    
     parsed match {
       
       // Handle a case where there is something wrong with the input arguments
@@ -77,24 +82,25 @@ object StepwiseModelSelection {
       }
       
       // If there is a valid set of arguments presented
-      case Some(config) => {
-        
-        val spark = SparkSession
-                      .builder
-                      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-                      .appName("SPAEML")
-                      .master(parsed.get.sparkMaster)
-                      .getOrCreate()
-                     
-        spark.sparkContext.setLogLevel(parsed.get.sparkLog)
+      case Some(_) => {
 
-        SPAEMLDense.performSPAEML(spark,
-                                 parsed.get.genotypeInput,
-                                 parsed.get.phenotypeInput,
-                                 parsed.get.output,
-                                 parsed.get.threshold,
-                                 parsed.get.serialization
-                               )
+        val spark = SparkSession
+          .builder
+          .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+          .appName("SPAEML")
+          .master(parsed.get.sparkMaster)
+          .getOrCreate()
+
+        spark.sparkContext.setLogLevel("ERROR")
+
+        SPAEMLDense.performSPAEML(
+          spark,
+          parsed.get.genotypeInputFile,
+          parsed.get.phenotypeInputFile,
+          parsed.get.outputDirectoryPath,
+          parsed.get.threshold,
+          parsed.get.serialize
+        )
       }
     }  
   }
