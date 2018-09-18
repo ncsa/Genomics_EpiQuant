@@ -1,3 +1,6 @@
+import java.net.URI
+
+import org.apache.hadoop.fs.{FileSystem, Path}
 import spaeml._
 import org.apache.spark.sql.SparkSession
 
@@ -13,6 +16,30 @@ case class InputConfig(
                       )
                       
 object StepwiseModelSelection {
+
+  def clearS3OutputDirectory(spark: SparkSession, s3BucketPath: String, outputDirectory: String): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+    val fs = FileSystem.get(URI.create(s3BucketPath), conf)
+    val outDirPath = new Path(s3BucketPath + outputDirectory)
+
+    if (fs.exists(outDirPath)) {
+      fs.delete(outDirPath, true)
+      println("Deleting output directory: " + outDirPath)
+    }
+  }
+
+  def clearLocalOutputDirectory(spark: SparkSession, outputDirectory: String): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+    val fs = FileSystem.get(conf)
+    val outDirPath = new Path(outputDirectory)
+
+    if (fs.exists(outDirPath)) {
+      fs.delete(outDirPath, true)
+      println("Deleting output directory: " + outDirPath)
+    }
+  }
 
   private val argParser = new scopt.OptionParser[InputConfig]("StepwiseModelSelection") {
     head("StepwiseModelSelection")
@@ -58,7 +85,7 @@ object StepwiseModelSelection {
       .action( (x, c) => c.copy(threshold = x) )
       .text("The p-value threshold for the backward and forward steps (default=0.05)")
 
-    opt[String]("spark")
+    opt[String]("master")
         .valueName("<url>")
         .action( (x, c) => c.copy(sparkMaster = x) )
         .text("The master URL for Spark")
@@ -93,14 +120,27 @@ object StepwiseModelSelection {
 
         spark.sparkContext.setLogLevel("ERROR")
 
-        SPAEMLDense.performSPAEML(
-          spark,
-          parsed.get.genotypeInputFile,
-          parsed.get.phenotypeInputFile,
-          parsed.get.outputDirectoryPath,
-          parsed.get.threshold,
-          parsed.get.serialize
-        )
+        if (parsed.get.aws) {
+          clearS3OutputDirectory(spark, parsed.get.s3BucketPath, parsed.get.outputDirectoryPath)
+          SPAEMLDense.performSPAEML(
+            spark,
+            parsed.get.s3BucketPath + parsed.get.genotypeInputFile,
+            parsed.get.s3BucketPath + parsed.get.phenotypeInputFile,
+            parsed.get.s3BucketPath + parsed.get.outputDirectoryPath,
+            parsed.get.threshold,
+            parsed.get.serialize
+          )
+        } else {
+          clearLocalOutputDirectory(spark, parsed.get.outputDirectoryPath)
+          SPAEMLDense.performSPAEML(
+            spark,
+            parsed.get.genotypeInputFile,
+            parsed.get.phenotypeInputFile,
+            parsed.get.outputDirectoryPath,
+            parsed.get.threshold,
+            parsed.get.serialize
+          )
+        }
       }
     }  
   }
