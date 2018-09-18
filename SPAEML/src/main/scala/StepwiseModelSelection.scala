@@ -111,17 +111,18 @@ object StepwiseModelSelection {
       // If there is a valid set of arguments presented
       case Some(_) => {
 
-        val spark = SparkSession
-          .builder
-          .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-          .appName("SPAEML")
-          .master(parsed.get.sparkMaster)
-          .getOrCreate()
-
-        spark.sparkContext.setLogLevel("ERROR")
-
         if (parsed.get.aws) {
+
+          val spark = SparkSession
+            .builder
+            .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+            .appName("SPAEML")
+            .getOrCreate()
+
+          spark.sparkContext.setLogLevel("INFO")
+
           clearS3OutputDirectory(spark, parsed.get.s3BucketPath, parsed.get.outputDirectoryPath)
+
           SPAEMLDense.performSPAEML(
             spark,
             parsed.get.s3BucketPath + parsed.get.genotypeInputFile,
@@ -131,7 +132,18 @@ object StepwiseModelSelection {
             parsed.get.serialize
           )
         } else {
+
+          val spark = SparkSession
+            .builder
+            .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+            .appName("SPAEML")
+            .master(parsed.get.sparkMaster)
+            .getOrCreate()
+
+          spark.sparkContext.setLogLevel("INFO")
+
           clearLocalOutputDirectory(spark, parsed.get.outputDirectoryPath)
+          
           SPAEMLDense.performSPAEML(
             spark,
             parsed.get.genotypeInputFile,
