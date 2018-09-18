@@ -10,9 +10,6 @@ import breeze.linalg.DenseVector
 import org.apache.spark.storage.StorageLevel
 
 /*
- * RANDOM NOTE
- *  (not 100 certain this is true; believed I saw evidence of this long ago. Need to reconsider)
- *
  *  Having a different threshold for the forward and backward steps can lead to oscillations
  *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
