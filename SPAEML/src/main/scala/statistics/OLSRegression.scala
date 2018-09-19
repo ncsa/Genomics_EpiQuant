@@ -101,12 +101,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
     *  Also called SS Reg (Sum of Squares due to regression)
    * 
    * SS_model = sumOf(y_hat - mean_y)^2
-   */
-  
-  /***************
-   * NEEDS VERIFICATION
-   ***************/
-    
+   */  
   lazy val SS_model: Double = sumOfSquared(fittedValues - meanY)
   lazy val MS_model: Double = SS_model / DoF_model
   
@@ -125,8 +120,6 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    * 
    */
 
-  //lazy val log_likelihood = (N + N * (log(2 * math.Pi) + N * log(RSS / N))) // WRONG, FROM DOCUMENT ( SAYS LIKELIHOOD TIMES -2)
-  //lazy val log_likelihood = -N/2 * (log(2 * math.Pi) + 1 - log(N) + log(RSS)) // CORRECT, WHAT R DOES
   lazy val log_likelihood: Double = -N/2 * (log(2 * math.Pi) + 1 + log(RSS/N)) // CORRECT, SIMPLIFIED EQUATION
 
   /**
@@ -156,11 +149,7 @@ abstract class OLSRegression(val xColumnNames: Array[String],
   
   lazy val SST: Double = RSS + SS_model
   
-  // Verified
   lazy val R_squared: Double = 1 - RSS / SST
-  /**
-   * Verified
-   */
   lazy val adjusted_R_squared: Double = 1 - ( RSS / (N - k)) / (SST / (N - 1) )
   
   /**
