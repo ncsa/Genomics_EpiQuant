@@ -27,11 +27,29 @@ abstract class FileData(val sampleNames: Vector[String],
 
 object SPAEML {
 
+  /**
+    * Produce the full path of an object in AWS S3.
+    *
+    * @param s3BucketName The S3 bucket name
+    * @param filePath The object's path inside S3 bucket
+    * @return Full path of the S3 object with the proper prefix
+    */
   def getFullS3Path(s3BucketName: String, filePath: String): String = {
     return "s3://" + s3BucketName + "/" + filePath
   }
 
-  def clearOutputDirectory(spark: SparkSession, isOnAws: Boolean, s3BucketName: String, outputDirectory: String): Unit = {
+  /**
+    * Check if the output directory already exists, and delete the directory if it does.
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    */
+  def clearOutputDirectory(spark: SparkSession,
+                           isOnAws: Boolean,
+                           s3BucketName: String,
+                           outputDirectory: String
+                          ): Unit = {
 
     val conf = spark.sparkContext.hadoopConfiguration
 
@@ -53,6 +71,15 @@ object SPAEML {
     }
   }
 
+  /**
+    * Write payload (String) to a file on HDFS (compatible with AWS S3).
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    * @param filename The output file's name
+    * @param payload The content (String) to write to the file
+    */
   def writeToOutputFile(spark: SparkSession,
                         isOnAws: Boolean,
                         s3BucketName: String,
@@ -78,23 +105,6 @@ object SPAEML {
     val writer = fs.create(outputFilePath)
     writer.writeChars(payload)
     writer.close()
-  }
-
-  def rawWriteToFile(directoryPath: String, filename: String, content: String) {
-
-    import java.io._
-
-    val dir = new File(directoryPath)
-    if (!dir.exists()) dir.mkdir()
-
-    val fullPath = (new Path(directoryPath, filename).toString)
-
-    val file = new File(fullPath)
-    if (!file.exists()) file.createNewFile()
-
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(content)
-    bw.close()
   }
 
 }
@@ -311,7 +321,6 @@ trait SPAEML extends Serializable {
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
 
     SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, "total_time.log", totalTimeString)
-
   }
 
 }
