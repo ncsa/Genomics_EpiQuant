@@ -1,11 +1,14 @@
 package spaeml
-  
+
 import statistics._
+
+import java.net.URI
 import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
 import org.apache.spark.broadcast._
 import breeze.linalg.DenseVector
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.storage.StorageLevel
 
 /*
@@ -24,14 +27,68 @@ abstract class FileData(val sampleNames: Vector[String],
 
 object SPAEML {
 
-  def writeToFile(directoryPath: String, filename: String, content: String) {
+  def getFullS3Path(s3BucketName: String, filePath: String): String = {
+    return "s3://" + s3BucketName + "/" + filePath
+  }
+
+  def clearOutputDirectory(spark: SparkSession, isOnAws: Boolean, s3BucketName: String, outputDirectory: String): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+     } else {
+      FileSystem.get(conf)
+    }
+
+    val outDirPath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, outputDirectory))
+    } else {
+      new Path(outputDirectory)
+    }
+
+    if (fs.exists(outDirPath)) {
+      fs.delete(outDirPath, true)
+      println("Deleting output directory: " + outDirPath)
+    }
+  }
+
+  def writeToOutputFile(spark: SparkSession,
+                        isOnAws: Boolean,
+                        s3BucketName: String,
+                        outputDirectory: String,
+                        filename: String,
+                        payload: String
+                       ): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+    } else {
+      FileSystem.get(conf)
+    }
+
+    val outputFilePath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, new Path(outputDirectory, filename).toString))
+    } else {
+      new Path(outputDirectory, filename)
+    }
+
+    val writer = fs.create(outputFilePath)
+    writer.writeChars(payload)
+    writer.close()
+  }
+
+  def rawWriteToFile(directoryPath: String, filename: String, content: String) {
 
     import java.io._
 
     val dir = new File(directoryPath)
     if (!dir.exists()) dir.mkdir()
 
-    val fullPath = directoryPath + "/" + filename
+    val fullPath = (new Path(directoryPath, filename).toString)
+
     val file = new File(fullPath)
     if (!file.exists()) file.createNewFile()
 
@@ -128,19 +185,32 @@ trait SPAEML extends Serializable {
     *
     */
   def performSPAEML(spark: SparkSession,
-                    genotypeFile: String,
-                    phenotypeFile: String,
-                    outputFileDirectory: String,
+                    genotypeFileName: String,
+                    phenotypeFileName: String,
+                    outputDirectoryPath: String,
+                    isOnAws: Boolean,
+                    s3BucketName: String,
                     threshold: Double,
-                    serialization: Boolean
+                    shouldSerialize: Boolean
                  ) {
 
     val totalStartTime = System.nanoTime()
 
-    val snpData = readHDFSFile(genotypeFile, spark.sparkContext)
-    val phenoData = readHDFSFile(phenotypeFile, spark.sparkContext)
+    SPAEML.clearOutputDirectory(spark, isOnAws, s3BucketName, outputDirectoryPath)
 
-    if (phenoData.sampleNames != snpData.sampleNames) {
+    val snpData = if (isOnAws) {
+      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, genotypeFileName), spark.sparkContext)
+    } else {
+      readHDFSFile(genotypeFileName, spark.sparkContext)
+    }
+
+    val phenotypeData = if (isOnAws) {
+      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, phenotypeFileName), spark.sparkContext)
+    } else {
+      readHDFSFile(phenotypeFileName, spark.sparkContext)
+    }
+
+    if (phenotypeData.sampleNames != snpData.sampleNames) {
       throw new Error("Sample order did not match between the SNP and Phenotype input files")
     }
 
@@ -187,15 +257,15 @@ trait SPAEML extends Serializable {
     val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
 
     val storageLevel = {
-      if (serialization) StorageLevel.MEMORY_AND_DISK_SER 
+      if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER
       else StorageLevel.MEMORY_AND_DISK
     }
 
     val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
-    val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
-    val phenotypeNames = phenoData.dataNames
+    val phenoBroadcast = spark.sparkContext.broadcast(phenotypeData.dataPairs.toMap)
+    val phenotypeNames = phenotypeData.dataNames
 
     // The :_* unpacks the contents of the array as input to the hash set
     val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
@@ -223,8 +293,8 @@ trait SPAEML extends Serializable {
 
       // Include both the standard R-like regression output and the ANOVA table style output
       val output = Array(timeString,
-                         "Genotype File: " + genotypeFile,
-                         "Phenotype File: " + phenotypeFile + "\n",
+                         "Genotype File: " + genotypeFileName,
+                         "Phenotype File: " + phenotypeFileName + "\n",
                          summaryString + "\n",
                          anovaSummaryString
                         )
@@ -233,15 +303,15 @@ trait SPAEML extends Serializable {
       output.foreach(println)
 
       // Save to file
-      spark.sparkContext.parallelize(output, 1)
-                        .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
+      SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, phenotype + ".summary", output.mkString("\n"))
+
     }
     
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
 
-    spark.sparkContext.parallelize(List(totalTimeString), 1)
-                        .saveAsTextFile(outputFileDirectory + "/total_time.log")
+    SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, "total_time.log", totalTimeString)
+
   }
 
 }
