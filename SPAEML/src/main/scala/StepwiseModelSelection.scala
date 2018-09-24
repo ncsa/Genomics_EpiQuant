@@ -9,7 +9,7 @@ case class InputConfig(
                         s3BucketName: String = "",
                         threshold: Double = 0.05,
                         shouldSerialize: Boolean = false,
-                        sparkMaster: String = "local[3]"
+                        sparkMaster: String = "local"
                       )
                       
 object StepwiseModelSelection {
