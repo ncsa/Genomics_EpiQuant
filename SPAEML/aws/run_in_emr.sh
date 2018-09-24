@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-    echo "This script will create a self-terminating EMR cluster to auto-run SPMAEL steps."
+    echo "This script will create a self-terminating EMR cluster to auto-run SPAEML steps."
     echo "--------------------------------------------------------------------"
     echo "Make sure that all JAR file and input files are deployed to S3 before running this."
     echo "--------------------------------------------------------------------"
