@@ -72,6 +72,36 @@ object SPAEML {
   }
 
   /**
+    * Verify if the output directory already exists. No side-effect.
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    * @return Boolean indicating if the output directory exists
+    */
+  def outputDirectoryAlreadyExists(spark: SparkSession,
+                                   isOnAws: Boolean,
+                                   s3BucketName: String,
+                                   outputDirectory: String): Boolean = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+    } else {
+      FileSystem.get(conf)
+    }
+
+    val outDirPath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, outputDirectory))
+    } else {
+      new Path(outputDirectory)
+    }
+
+    return (fs.exists(outDirPath))
+  }
+
+  /**
     * Write payload (String) to a file on HDFS (compatible with AWS S3).
     * @param spark The Spark session object
     * @param isOnAws Boolean indicating if the program is running on AWS
@@ -206,7 +236,9 @@ trait SPAEML extends Serializable {
 
     val totalStartTime = System.nanoTime()
 
-    SPAEML.clearOutputDirectory(spark, isOnAws, s3BucketName, outputDirectoryPath)
+    if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
+      throw new Error("Output directory already exists. Either remove the directory or output to a different directory.")
+    }
 
     val snpData = if (isOnAws) {
       readHDFSFile(SPAEML.getFullS3Path(s3BucketName, genotypeFileName), spark.sparkContext)
