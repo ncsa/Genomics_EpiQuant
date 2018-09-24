@@ -15,6 +15,16 @@ mvn install
 In target, the jar will be present.
 Run with java -jar <jar location>
 
+## Deploying & Running on AWS
+
+1. Deploy JAR file and input files to S3 by running `aws/deploy_to_s3.sh`.
+
+Example: `./aws/deploy_to_s3.sh -b genomics-epiquant-beta --j target/SPAEML-0.0.1-jar-with-dependencies.jar --input src/test/resources/Genotypes/10.Subset.n=300.epiq src/test/resources/Phenotypes/Simulated.Data.1.Reps.Herit.0.92_n=300.epiq`
+
+2. Create EMR cluster and run steps by running `aws/run_in_emr.sh`.
+
+Example: `./aws/run_in_emr.sh -b genomics-epiquant-beta -j SPAEML-0.0.1-jar-with-dependencies.jar -g 10.Subset.n=300.epiq -p Simulated.Data.1.Reps.Herit.0.92_n=300.epiq -o output`
+
 ## Background
 
 Computing the two-way interactions between terms when detecting epistasis can become computationally and memory intensive very quickly. However, because the SEMS process can be easily implemented in an iterative map-reduce style, it naturally lends itself to the Apache Spark platform.
