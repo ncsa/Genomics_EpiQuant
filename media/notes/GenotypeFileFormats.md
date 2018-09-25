@@ -69,6 +69,7 @@ Plink has a tool to turn this information into 0, 1, and 2, which is how we want
 
 **recodeAD**
 ```
+...
 which, assuming C is the minor allele, will recode genotypes as follows:
 
      SNP       SNP_A ,  SNP_HET
@@ -77,6 +78,8 @@ which, assuming C is the minor allele, will recode genotypes as follows:
      A C   ->    1   ,   1
      C C   ->    2   ,   0
      0 0   ->   NA   ,  NA
+
+Note: We want to use the equivalent of PLINK's recodeA, because it omits the SNP_HET info. 
 ```
 
 
