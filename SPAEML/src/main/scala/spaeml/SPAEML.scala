@@ -1,12 +1,14 @@
 package spaeml
-  
+
 import statistics._
 
+import java.net.URI
 import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
 import org.apache.spark.broadcast._
 import breeze.linalg.DenseVector
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.storage.StorageLevel
 
 /*
@@ -14,11 +16,124 @@ import org.apache.spark.storage.StorageLevel
  *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
  */
 
-
 abstract class FileData(val sampleNames: Vector[String],
                         val dataPairs: Vector[(String, DenseVector[Double])]
                        ) {
   lazy val dataNames: Vector[String] = dataPairs.map(_._1)
+}
+
+object SPAEML {
+
+  /**
+    * Produce the full path of an object in AWS S3.
+    *
+    * @param s3BucketName The S3 bucket name
+    * @param filePath The object's path inside S3 bucket
+    * @return Full path of the S3 object with the proper prefix
+    */
+  def getFullS3Path(s3BucketName: String, filePath: String): String = {
+    return "s3://" + s3BucketName + "/" + filePath
+  }
+
+  /**
+    * Check if the output directory already exists, and delete the directory if it does.
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    */
+  def clearOutputDirectory(spark: SparkSession,
+                           isOnAws: Boolean,
+                           s3BucketName: String,
+                           outputDirectory: String
+                          ): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+     } else {
+      FileSystem.get(conf)
+    }
+
+    val outDirPath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, outputDirectory))
+    } else {
+      new Path(outputDirectory)
+    }
+
+    if (fs.exists(outDirPath)) {
+      fs.delete(outDirPath, true)
+      println("Deleting output directory: " + outDirPath)
+    }
+  }
+
+  /**
+    * Verify if the output directory already exists. No side-effect.
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    * @return Boolean indicating if the output directory exists
+    */
+  def outputDirectoryAlreadyExists(spark: SparkSession,
+                                   isOnAws: Boolean,
+                                   s3BucketName: String,
+                                   outputDirectory: String): Boolean = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+    } else {
+      FileSystem.get(conf)
+    }
+
+    val outDirPath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, outputDirectory))
+    } else {
+      new Path(outputDirectory)
+    }
+
+    return (fs.exists(outDirPath))
+  }
+
+  /**
+    * Write payload (String) to a file on HDFS (compatible with AWS S3).
+    * @param spark The Spark session object
+    * @param isOnAws Boolean indicating if the program is running on AWS
+    * @param s3BucketName The S3 bucket name (only used if running on AWS)
+    * @param outputDirectory The output directory's path
+    * @param filename The output file's name
+    * @param payload The content (String) to write to the file
+    */
+  def writeToOutputFile(spark: SparkSession,
+                        isOnAws: Boolean,
+                        s3BucketName: String,
+                        outputDirectory: String,
+                        filename: String,
+                        payload: String
+                       ): Unit = {
+
+    val conf = spark.sparkContext.hadoopConfiguration
+
+    val fs = if (isOnAws) {
+      FileSystem.get(new URI("s3://" + s3BucketName), conf)
+    } else {
+      FileSystem.get(conf)
+    }
+
+    val outputFilePath = if (isOnAws) {
+      new Path(getFullS3Path(s3BucketName, new Path(outputDirectory, filename).toString))
+    } else {
+      new Path(outputDirectory, filename)
+    }
+
+    val writer = fs.create(outputFilePath)
+    writer.writeChars(payload)
+    writer.close()
+  }
+
 }
 
 trait SPAEML extends Serializable {
@@ -51,11 +166,11 @@ trait SPAEML extends Serializable {
   /*
    * CONCRETE FUNCTIONS
    */
-  
+
   protected def flattenArrayOfBreezeVectors(input: Array[breeze.linalg.Vector[Double]]): Array[Double] = {
-    input.flatMap(breezeVect => breezeVect.toDenseVector.toScalaVector)
+    input.flatMap(breezeVector => breezeVector.toDenseVector.toScalaVector)
   }
-                  
+
   /**
    * Create a non-redundant pairwise Vector of names from a vector of string inputs
    *
@@ -107,19 +222,34 @@ trait SPAEML extends Serializable {
     *
     */
   def performSPAEML(spark: SparkSession,
-                    genotypeFile: String,
-                    phenotypeFile: String,
-                    outputFileDirectory: String,
+                    genotypeFileName: String,
+                    phenotypeFileName: String,
+                    outputDirectoryPath: String,
+                    isOnAws: Boolean,
+                    s3BucketName: String,
                     threshold: Double,
-                    serialization: Boolean
+                    shouldSerialize: Boolean
                  ) {
-    
+
     val totalStartTime = System.nanoTime()
 
-    val snpData = readHDFSFile(genotypeFile, spark.sparkContext)
-    val phenoData = readHDFSFile(phenotypeFile, spark.sparkContext)
+    if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
+      throw new Error("Output directory already exists. Either remove the directory or output to a different directory.")
+    }
 
-    if (phenoData.sampleNames != snpData.sampleNames) {
+    val snpData = if (isOnAws) {
+      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, genotypeFileName), spark.sparkContext)
+    } else {
+      readHDFSFile(genotypeFileName, spark.sparkContext)
+    }
+
+    val phenotypeData = if (isOnAws) {
+      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, phenotypeFileName), spark.sparkContext)
+    } else {
+      readHDFSFile(phenotypeFileName, spark.sparkContext)
+    }
+
+    if (phenotypeData.sampleNames != snpData.sampleNames) {
       throw new Error("Sample order did not match between the SNP and Phenotype input files")
     }
 
@@ -166,15 +296,15 @@ trait SPAEML extends Serializable {
     val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
 
     val storageLevel = {
-      if (serialization) StorageLevel.MEMORY_AND_DISK_SER 
+      if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER
       else StorageLevel.MEMORY_AND_DISK
     }
 
     val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
-    val phenoBroadcast = spark.sparkContext.broadcast(phenoData.dataPairs.toMap)
-    val phenotypeNames = phenoData.dataNames
+    val phenoBroadcast = spark.sparkContext.broadcast(phenotypeData.dataPairs.toMap)
+    val phenotypeNames = phenotypeData.dataNames
 
     // The :_* unpacks the contents of the array as input to the hash set
     val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
@@ -187,22 +317,23 @@ trait SPAEML extends Serializable {
      *  For each phenotype, build a model, println and save the results
      */
     for (phenotype <- phenotypeNames) {
+
       val startTime = System.nanoTime()
-      
+
       val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast,
                                  phenotype, initialCollections, threshold, null, 1
                                 )      
+
       val endTime = System.nanoTime()
 
       val timeString = constructTimeString(startTime, endTime)
       val summaryString = bestReg.summaryString
       val anovaSummaryString = bestReg.anovaTable.summaryString
 
-
       // Include both the standard R-like regression output and the ANOVA table style output
       val output = Array(timeString,
-                         "Genotype File: " + genotypeFile,
-                         "Phenotype File: " + phenotypeFile + "\n",
+                         "Genotype File: " + genotypeFileName,
+                         "Phenotype File: " + phenotypeFileName + "\n",
                          summaryString + "\n",
                          anovaSummaryString
                         )
@@ -211,16 +342,14 @@ trait SPAEML extends Serializable {
       output.foreach(println)
 
       // Save to file
-      spark.sparkContext.parallelize(output, 1)
-                        .saveAsTextFile(outputFileDirectory + "/" + phenotype + ".summary")
+      SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, phenotype + ".summary", output.mkString("\n"))
+
     }
     
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
-    println(totalTimeString)
-    
-    spark.sparkContext.parallelize(List(totalTimeString), 1)
-                        .saveAsTextFile(outputFileDirectory + "/total_time.log")
+
+    SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, "total_time.log", totalTimeString)
   }
-  
+
 }
