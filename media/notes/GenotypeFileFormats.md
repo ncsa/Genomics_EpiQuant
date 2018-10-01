@@ -80,7 +80,7 @@ which, assuming C is the minor allele, will recode genotypes as follows:
      0 0   ->   NA   ,  NA
 
 Note: We want to use the equivalent of PLINK's recodeA, because it omits the SNP_HET info. 
-Note: when an allele that is both non-major and non-minor is invovled, the corresponding value is NULL.
+Note: When an allele that is both non-major and non-minor is invovled, the corresponding value is NULL.
 ```
 
 
