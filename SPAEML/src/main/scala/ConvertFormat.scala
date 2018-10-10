@@ -1,8 +1,8 @@
 import java.io.File
 import converters._
 
-case class Config(input: File = new File("."),
-                  output: File = new File("."),
+case class Config(inputFiles: Seq[String] = Seq(),
+                  outputFile: String =  ".",
                   inputType: String = "Custom",
                   deleteColumns: Seq[Int] = Seq(),
                   transpose: Boolean = false,
@@ -11,25 +11,23 @@ case class Config(input: File = new File("."),
 
 object ConvertFormat {
 
-  private val fileTypes = List("plink", "Plink", "PLINK",
-    "Custom", "custom"
-  )
+  private val fileTypes = List("plink", "custom")
 
   private val argParser = new scopt.OptionParser[Config]("ConvertFormat") {
     head("\nConvertFormat")
 
     note("Required Arguments\n------------------")
 
-    opt[File]('i', "input")
+    opt[Seq[String]]('i', "inputs")
       .required
-      .valueName("<file>")
-      .action( (x, c) => c.copy(input = x) )
-      .text("Path of the file to convert")
+      .valueName("<String>,<String>")
+      .action( (x, c) => c.copy(inputFiles = x) )
+      .text("Paths of the files to convert")
 
-    opt[File]('o', "output")
+    opt[String]('o', "output")
       .required
-      .valueName("<file>")
-      .action( (x, c) => c.copy(output = x) )
+      .valueName("<String>")
+      .action( (x, c) => c.copy(outputFile = x) )
       .text("Path where the output file will be placed")
 
     opt[String]("inputType")
@@ -38,7 +36,7 @@ object ConvertFormat {
       .action( (x, c) => c.copy(inputType = x) )
       .text("The format of the input file { plink | custom }")
       .validate {x =>
-        if (fileTypes.contains(x)) success
+        if (fileTypes.contains(x.toLowerCase)) success
         else failure("File type must be plink, ..., or custom")
       }
 
@@ -67,6 +65,11 @@ object ConvertFormat {
       .valueName("<Int>,<Int>,...")
       .text("Comma separated list of columns to delete; Count from 0")
       .action( (x, c) => c.copy(deleteColumns = x) )
+
+    checkConfig( c =>
+      if (c.inputFiles.size < 1) failure("You must specify at least one input file")
+      else success
+    )
   }
 
   def launch(args: Array[String]) = {
@@ -82,21 +85,37 @@ object ConvertFormat {
       case Some(config) => {
 
         // FileParser is an abstract class
-        val parser: FileParser = parsed.get.inputType match {
-          case "custom" | "Custom" | "CUSTOM" => {
-            new CustomFileParser(parsed.get.input,
+        parsed.get.inputType.toLowerCase match {
+          case "custom" => {
+
+            val inputFile = new File(parsed.get.inputFiles(0))
+            val outputFile = new File(parsed.get.outputFile)
+
+            new CustomFileParser(
+              inputFile,
               parsed.get.delimiter,
               parsed.get.deleteColumns,
               parsed.get.transpose
-            )
+            ).saveParsedFile(outputFile)
+            println("Conversion successful: new file can be found at: " + outputFile.getAbsolutePath)
           }
+          case "plink" => {
 
+            if (parsed.get.inputFiles.size != 2) {
+              throw new Error("Error: for PLINK, must specify a .ped file and a .map file")
+            }
+
+            val ped = parsed.get.inputFiles filter (x => ".*(\\.ped)".r.pattern.matcher(x).matches)
+            val map = parsed.get.inputFiles filter (x => ".*(\\.map)".r.pattern.matcher(x).matches)
+            if (ped.size != 1 || map.size != 1) {
+              throw new Error("Error: for PLINK, must specify a .ped file and a .map file")
+            }
+
+            new PLINKFileParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
+            println("Conversion successful: new file can be found at: " + parsed.get.outputFile)
+          }
           case _ => throw new Error("Error: Invalid Input Type")
         }
-
-        parser.saveParsedFile(parsed.get.output)
-        println("Conversion successful: new file can be found at: " + parsed.get.output.getAbsolutePath.toString)
-
       }
     }
   }
