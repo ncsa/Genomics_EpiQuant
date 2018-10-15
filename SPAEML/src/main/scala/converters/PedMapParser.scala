@@ -24,7 +24,7 @@ import scala.collection.immutable.Map
   * Columns:
   *   first 6 columns:
   *     - family ID (string, unique)
-  *     - individual ID (string)
+  *     - individual ID (string, unique within family)
   *     - father ID (string)
   *     - mother ID (string)
   *     - sex (int)
@@ -43,7 +43,7 @@ import scala.collection.immutable.Map
   * @param delimiter The delimiter used by .map and .ped file (default is a single space)
   */
 
-class PLINKFileParser(mapFilePath: String, pedFilePath: String, delimiter: String=" ") {
+class PedMapParser(mapFilePath: String, pedFilePath: String, delimiter: String=" ") {
 
   // The index of the column for SNP names in a .map file
   private val SNP_NAME_COLUMN_POS = 1
@@ -106,13 +106,24 @@ class PLINKFileParser(mapFilePath: String, pedFilePath: String, delimiter: Strin
 
     for ((snpName, index) <- snpArray.zipWithIndex) {
 
+      // For each SNP, get all occurrence of alleles (concatenating elements of the two corresponding columns for the SNP)
       val allelesOfSNP: Stream[String] = pedMatrix.map(_(5 + index*2 + 1)) ++ pedMatrix.map(_(5 + index*2 + 2))
+
+      // Turn the list into a counter (mapping from unique allele to number of occurrences)
       var allelesCount: Map[String, Int] = allelesOfSNP.foldLeft(Map.empty[String, Int].withDefaultValue(0)) {
         (map, element) => map + (element -> (map(element) + 1))
       }
+
+      // Get the name (_1) of the max element in the map by occurrence count (_2)
       val major = allelesCount.maxBy(_._2)._1
+
+      // Drop the major allele from the map
       allelesCount -= major
+
+      // If there is only one allele for the SNP, then set minor to empty, otherwise, use maxBy again to find minor allele.
       val minor = if (allelesCount.isEmpty) "" else allelesCount.maxBy(_._2)._1
+
+      // Append to the output vector
       output += ((snpName, major, minor))
     }
 

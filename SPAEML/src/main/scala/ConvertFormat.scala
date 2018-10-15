@@ -111,7 +111,7 @@ object ConvertFormat {
               throw new Error("Error: for PLINK, must specify a .ped file and a .map file")
             }
 
-            new PLINKFileParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
+            new PedMapParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
             println("Conversion successful: new file can be found at: " + parsed.get.outputFile)
           }
           case _ => throw new Error("Error: Invalid Input Type")
