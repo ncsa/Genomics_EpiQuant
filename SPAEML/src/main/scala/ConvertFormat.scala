@@ -11,7 +11,7 @@ case class Config(inputFiles: Seq[String] = Seq(),
 
 object ConvertFormat {
 
-  private val fileTypes = List("plink", "custom")
+  private val fileTypes = List("pedmap", "custom")
 
   private val argParser = new scopt.OptionParser[Config]("ConvertFormat") {
     head("\nConvertFormat")
@@ -34,10 +34,10 @@ object ConvertFormat {
       .required
       .valueName("<String>")
       .action( (x, c) => c.copy(inputType = x) )
-      .text("The format of the input file { plink | custom }")
+      .text("The format of the input file { pedmap | custom }")
       .validate {x =>
         if (fileTypes.contains(x.toLowerCase)) success
-        else failure("File type must be plink, ..., or custom")
+        else failure("File type must be either pedmap or custom")
       }
 
     note("\nOptional Arguments\n------------------")
@@ -99,16 +99,17 @@ object ConvertFormat {
             ).saveParsedFile(outputFile)
             println("Conversion successful: new file can be found at: " + outputFile.getAbsolutePath)
           }
-          case "plink" => {
+          case "pedmap" => {
 
             if (parsed.get.inputFiles.size != 2) {
-              throw new Error("Error: for PLINK, must specify a .ped file and a .map file")
+              throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
             }
 
-            val ped = parsed.get.inputFiles filter (x => ".*(\\.ped)".r.pattern.matcher(x).matches)
-            val map = parsed.get.inputFiles filter (x => ".*(\\.map)".r.pattern.matcher(x).matches)
+            val ped = parsed.get.inputFiles filter (x => x.takeRight(4) == ".ped")
+            val map = parsed.get.inputFiles filter (x => x.takeRight(4) == ".map")
+
             if (ped.size != 1 || map.size != 1) {
-              throw new Error("Error: for PLINK, must specify a .ped file and a .map file")
+              throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
             }
 
             new PedMapParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
