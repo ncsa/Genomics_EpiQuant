@@ -2,7 +2,9 @@ import spaeml._
 import org.apache.spark.sql.SparkSession
 
 case class InputConfig(
-                        genotypeInputFile: String = "",
+                        epiqInputFile: String = "",
+                        pedInputFile: String = "",
+                        mapInputFile: String = "",
                         phenotypeInputFile: String = "",
                         outputDirectoryPath: String = "",
                         isOnAws: Boolean = false,
@@ -19,12 +21,6 @@ object StepwiseModelSelection {
 
     note("Required Arguments\n------------------")
 
-    opt[String]('G', "genotypeInput")
-      .required
-      .valueName("<file>")
-      .action( (x, c) => c.copy(genotypeInputFile = x) )
-      .text("Path to the genotype input file")
-    
     opt[String]('P', "phenotypeInput")
       .required
       .valueName("<file>")
@@ -38,6 +34,21 @@ object StepwiseModelSelection {
       .text("Path to the output directory")
       
     note("\nOptional Arguments\n------------------")
+
+    opt[String]("epiq")
+      .valueName("<file>")
+      .action( (x, c) => c.copy(epiqInputFile = x) )
+      .text("Path to the .epiq genotype input file")
+
+    opt[String]("ped")
+      .valueName("<file>")
+      .action( (x, c) => c.copy(pedInputFile = x) )
+      .text("Path to the .ped genotype input file")
+
+    opt[String]("map")
+      .valueName("<file>")
+      .action( (x, c) => c.copy(mapInputFile = x) )
+      .text("Path to the .map genotype input file")
 
     opt[Unit]("aws")
       .action( (_, c) => c.copy(isOnAws = true) )
@@ -63,6 +74,18 @@ object StepwiseModelSelection {
       .valueName("<url>")
       .action( (x, c) => c.copy(sparkMaster = x) )
       .text("The master URL for Spark")
+
+    checkConfig( c =>
+      if (c.epiqInputFile.isEmpty && (c.pedInputFile.isEmpty || c.mapInputFile.isEmpty)) {
+        failure("Need genotype input file: either specify one .epiq file or both .ped and .map files.")
+      }
+      else if (!c.epiqInputFile.isEmpty && !(c.pedInputFile.isEmpty && c.mapInputFile.isEmpty)) {
+        failure("Conflicting genotype input files: either specify one .epiq file or both .ped and .map files.")
+      }
+      else {
+        success
+      }
+    )
 
     checkConfig( c =>
       if (c.isOnAws && c.s3BucketName.isEmpty) failure("If the '--aws' flag is used, a S3 bucket path must be specified")
@@ -100,7 +123,9 @@ object StepwiseModelSelection {
         spark.sparkContext.setLogLevel("ERROR")
         SPAEMLDense.performSPAEML(
           spark,
-          parsed.get.genotypeInputFile,
+          parsed.get.epiqInputFile,
+          parsed.get.pedInputFile,
+          parsed.get.mapInputFile,
           parsed.get.phenotypeInputFile,
           parsed.get.outputDirectoryPath,
           parsed.get.isOnAws,
