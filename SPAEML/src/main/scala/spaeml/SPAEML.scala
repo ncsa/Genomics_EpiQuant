@@ -231,7 +231,8 @@ trait SPAEML extends Serializable {
                     isOnAws: Boolean,
                     s3BucketName: String,
                     threshold: Double,
-                    shouldSerialize: Boolean
+                    shouldSerialize: Boolean,
+                    epistatic: Boolean
                  ) {
 
     val totalStartTime = System.nanoTime()
@@ -290,22 +291,27 @@ trait SPAEML extends Serializable {
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
 
-    // Spread Vector of pairwise SNP_name combinations across cluster
-    val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
-    val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
-
-    // Parallelize the original table into an RDD
-    val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
-
-    // Create the pairwise combinations across the cluster
-    val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-
     val storageLevel = {
       if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER
       else StorageLevel.MEMORY_AND_DISK
     }
 
-    val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+    // Parallelize the original table into an RDD
+    val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
+
+    val fullSnpRDD = if (epistatic) {
+
+      // Spread Vector of pairwise SNP_name combinations across cluster
+      val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
+      val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
+
+      // Create the pairwise combinations across the cluster
+      val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
+
+      (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+    } else {
+      singleSnpRDD.persist(storageLevel)
+    }
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
     val phenoBroadcast = spark.sparkContext.broadcast(phenotypeData.dataPairs.toMap)
@@ -348,7 +354,7 @@ trait SPAEML extends Serializable {
                          summaryString + "\n",
                          anovaSummaryString
                         )
-      
+
       // Print
       output.foreach(println)
 
@@ -356,7 +362,7 @@ trait SPAEML extends Serializable {
       SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, phenotype + ".summary", output.mkString("\n"))
 
     }
-    
+
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
 

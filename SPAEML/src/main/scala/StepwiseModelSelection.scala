@@ -11,7 +11,8 @@ case class InputConfig(
                         s3BucketName: String = "",
                         threshold: Double = 0.05,
                         shouldSerialize: Boolean = false,
-                        sparkMaster: String = "local"
+                        sparkMaster: String = "local",
+                        epistatic: Boolean = true
                       )
                       
 object StepwiseModelSelection {
@@ -75,6 +76,12 @@ object StepwiseModelSelection {
       .action( (x, c) => c.copy(sparkMaster = x) )
       .text("The master URL for Spark")
 
+    opt[Boolean]("epistatic")
+        .optional()
+        .valueName("<boolean>")
+        .action( (x, c) => c.copy(epistatic = x) )
+        .text("Include epistatic terms in computation (default=True)")
+
     checkConfig( c =>
       if (c.epiqInputFile.isEmpty && (c.pedInputFile.isEmpty || c.mapInputFile.isEmpty)) {
         failure("Need genotype input file: either specify one .epiq file or both .ped and .map files.")
@@ -131,7 +138,8 @@ object StepwiseModelSelection {
           parsed.get.isOnAws,
           parsed.get.s3BucketName,
           parsed.get.threshold,
-          parsed.get.shouldSerialize
+          parsed.get.shouldSerialize,
+          parsed.get.epistatic
         )
 
       }
