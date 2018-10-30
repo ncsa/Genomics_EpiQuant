@@ -1,13 +1,14 @@
 package spaeml
 
 import statistics._
-
 import java.net.URI
+
 import scala.collection.mutable
 import org.apache.spark._
 import org.apache.spark.sql._
 import org.apache.spark.broadcast._
 import breeze.linalg.DenseVector
+import converters.PedMapParser
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.storage.StorageLevel
 
@@ -222,13 +223,16 @@ trait SPAEML extends Serializable {
     *
     */
   def performSPAEML(spark: SparkSession,
-                    genotypeFileName: String,
+                    epiqFileName: String,
+                    pedFileName: String,
+                    mapFileName: String,
                     phenotypeFileName: String,
                     outputDirectoryPath: String,
                     isOnAws: Boolean,
                     s3BucketName: String,
                     threshold: Double,
-                    shouldSerialize: Boolean
+                    shouldSerialize: Boolean,
+                    epistatic: Boolean
                  ) {
 
     val totalStartTime = System.nanoTime()
@@ -237,10 +241,12 @@ trait SPAEML extends Serializable {
       throw new Error("Output directory already exists. Either remove the directory or output to a different directory.")
     }
 
-    val snpData = if (isOnAws) {
-      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, genotypeFileName), spark.sparkContext)
+    val snpData = if (epiqFileName.isEmpty) {
+      new PedMapParser(mapFileName, pedFileName).parseAndCreateDenseFileObject()
+    } else if (isOnAws) {
+      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, epiqFileName), spark.sparkContext)
     } else {
-      readHDFSFile(genotypeFileName, spark.sparkContext)
+      readHDFSFile(epiqFileName, spark.sparkContext)
     }
 
     val phenotypeData = if (isOnAws) {
@@ -284,23 +290,28 @@ trait SPAEML extends Serializable {
     // Broadcast original SNP map where (SNP_name -> [SNP_values])
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
-    
-    // Spread Vector of pairwise SNP_name combinations across cluster
-    val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
-    val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
-
-    // Parallelize the original table into an RDD
-    val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
-
-    // Create the pairwise combinations across the cluster
-    val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
 
     val storageLevel = {
       if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER
       else StorageLevel.MEMORY_AND_DISK
     }
 
-    val fullSnpRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+    // Parallelize the original table into an RDD
+    val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
+
+    val fullSnpRDD = if (epistatic) {
+
+      // Spread Vector of pairwise SNP_name combinations across cluster
+      val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
+      val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
+
+      // Create the pairwise combinations across the cluster
+      val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
+
+      (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+    } else {
+      singleSnpRDD.persist(storageLevel)
+    }
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
     val phenoBroadcast = spark.sparkContext.broadcast(phenotypeData.dataPairs.toMap)
@@ -322,7 +333,7 @@ trait SPAEML extends Serializable {
 
       val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast,
                                  phenotype, initialCollections, threshold, null, 1
-                                )      
+                                )
 
       val endTime = System.nanoTime()
 
@@ -331,13 +342,19 @@ trait SPAEML extends Serializable {
       val anovaSummaryString = bestReg.anovaTable.summaryString
 
       // Include both the standard R-like regression output and the ANOVA table style output
+      val genotypeFileNames = if (epiqFileName.isEmpty) {
+        pedFileName + " " + mapFileName
+      } else {
+        epiqFileName
+      }
+
       val output = Array(timeString,
-                         "Genotype File: " + genotypeFileName,
+                         "Genotype File: " + genotypeFileNames,
                          "Phenotype File: " + phenotypeFileName + "\n",
                          summaryString + "\n",
                          anovaSummaryString
                         )
-      
+
       // Print
       output.foreach(println)
 
@@ -345,7 +362,7 @@ trait SPAEML extends Serializable {
       SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, phenotype + ".summary", output.mkString("\n"))
 
     }
-    
+
     val totalEndTime = System.nanoTime()
     val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
 
