@@ -1,0 +1,7 @@
+/bin/
+/target/
+.idea
+.cache-main
+.cache-tests
+.DS_Store
+*.iml

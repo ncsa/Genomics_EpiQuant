@@ -1,0 +1,102 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>SPAEML</groupId>
+  <artifactId>SPAEML</artifactId>
+  <version>0.0.1</version>
+  
+  <build>
+    <sourceDirectory>src/main/scala</sourceDirectory>
+    <testSourceDirectory>src/test/scala</testSourceDirectory>
+      
+    <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.2</version>
+        <executions>
+        <execution> 
+          <goals>
+            <goal>compile</goal>
+            <goal>testCompile</goal>
+          </goals>
+        </execution>
+      </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+  </plugins>
+  
+  </build>
+  <dependencies>
+    
+    <dependency>
+      <groupId>com.github.scopt</groupId>
+      <artifactId>scopt_2.11</artifactId>
+      <version>3.5.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.11</artifactId>
+      <version>2.1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_2.11</artifactId>
+      <version>2.1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.scalanlp</groupId>
+      <artifactId>breeze_2.11</artifactId>
+      <version>0.13</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.scalanlp/breeze-natives_2.11 -->
+    <dependency>
+      <groupId>org.scalanlp</groupId>
+      <artifactId>breeze-natives_2.11</artifactId>
+      <version>0.13.2</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.github.fommil.netlib/all -->
+    <dependency>
+      <groupId>com.github.fommil.netlib</groupId>
+      <artifactId>all</artifactId>
+      <version>1.1.2</version>
+      <type>pom</type>
+    </dependency>
+
+  </dependencies>
+</project>
