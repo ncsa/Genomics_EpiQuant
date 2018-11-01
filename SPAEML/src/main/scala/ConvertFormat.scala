@@ -57,13 +57,13 @@ object ConvertFormat {
     opt[Boolean]("columnsAreVariants")
       .optional
       .valueName("{ default = false }")
-      .text("(custom mode only) Variants are stored in columns")
+      .text("(custom-only) Variants are stored in columns")
       .action( (x, c) => c.copy(columnsAreVariants = x) )
 
     opt[Seq[Int]]("deleteColumns")
       .optional
       .valueName("<Int>,<Int>,...")
-      .text("Comma separated list of columns to delete; Count from 0")
+      .text("(custom-only) Comma separated list of columns to delete; Count from 0")
       .action( (x, c) => c.copy(deleteColumns = x) )
 
     checkConfig( c =>
@@ -88,15 +88,15 @@ object ConvertFormat {
         parsed.get.inputType.toLowerCase match {
           case "custom" => {
 
-            val outputFile = new File(parsed.get.outputFile)
-
             new CustomFileParser(parsed.get.inputFiles(0),
                                  parsed.get.delimiter,
                                  parsed.get.deleteColumns,
                                  parsed.get.columnsAreVariants
-                                ).writeEpiqFile(outputFile)
+                                ).writeEpiqFile(parsed.get.outputFile)
 
-            println("Conversion successful: new file can be found at: " + outputFile.getAbsolutePath)
+            println("Conversion successful: new file can be found at: " +
+              new File(parsed.get.outputFile).getAbsolutePath
+            )
           }
           case "pedmap" => {
 
@@ -111,8 +111,10 @@ object ConvertFormat {
               throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
             }
 
-            new PedMapParser(map(0), ped(0)).writeEpiqFile(new File(parsed.get.outputFile))
-            println("Conversion successful: new file can be found at: " + parsed.get.outputFile)
+            new PedMapParser(map(0), ped(0)).writeEpiqFile(parsed.get.outputFile)
+            println("Conversion successful: new file can be found at: " +
+              new File(parsed.get.outputFile).getAbsolutePath
+            )
           }
           case _ => throw new Error("Error: Invalid Input Type")
         }

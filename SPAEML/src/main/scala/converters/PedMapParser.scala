@@ -160,11 +160,7 @@ class PedMapParser(mapFilePath: String, pedFilePath: String, delimiter: String="
     }
 
     if (firstAllele == secondAllele) {
-      if (firstAllele == majorAllele) {
-        0.0
-      } else {
-        2.0
-      }
+      if (firstAllele == majorAllele) 0.0 else 2.0
     } else {
       1.0
     }

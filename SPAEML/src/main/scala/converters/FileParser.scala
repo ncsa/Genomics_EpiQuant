@@ -11,11 +11,12 @@ abstract class FileParser {
   val fileData: FileData
 
   /**
-    * Parse the input files and write the result to a output file.
+    * Parse the input files and write the result to an output file.
     * @param outputFilePath Path to the output file
     */
-  def writeEpiqFile(outputFilePath: File): Unit = {
-    val bw = new BufferedWriter(new FileWriter(outputFilePath))
+  def writeEpiqFile(outputFilePath: String): Unit = {
+    val file = new File(outputFilePath)
+    val bw = new BufferedWriter(new FileWriter(file))
 
     val header = "HeaderLine" + "\t" + fileData.sampleNames.mkString("\t")
     val dataConcat = fileData.dataPairs.map(x => {x._1 + "\t" + x._2.toArray.mkString("\t")})
