@@ -1,13 +1,12 @@
 package converters
-import java.io.{BufferedWriter, File, FileWriter}
 import breeze.linalg.DenseVector
-import spaeml.DenseFileData
 import scala.io.Source
 import scala.collection.immutable.Map
+import dataformats.FileData
 
 /**
   * This class is a parser for converting standard PLINK (.map & .ped) files
-  * into either an intermediate .epiq file or directly into a DenseFileData
+  * into either an intermediate .epiq file or directly into a FileData
   * object to be used in SPAEML.
   *
   * MAP file format:
@@ -43,53 +42,28 @@ import scala.collection.immutable.Map
   * @param delimiter The delimiter used by .map and .ped file (default is a single space)
   */
 
-class PedMapParser(mapFilePath: String, pedFilePath: String, delimiter: String=" ") {
+class PedMapParser(mapFilePath: String, pedFilePath: String, delimiter: String=" ") extends FileParser {
 
   // The index of the column for SNP names in a .map file
   private val SNP_NAME_COLUMN_POS = 1
-  // The encoding used by the .map and .ped files
-  private val FILE_ENCODING = "UTF-8"
 
   // List storing all SNP names
-  val SNPs: Stream[String] = Source.fromFile(mapFilePath, FILE_ENCODING).getLines().map(_.split(delimiter)(SNP_NAME_COLUMN_POS)).toStream
+  val SNPs: Stream[String] =
+    Source.fromFile(mapFilePath, FILE_ENCODING).getLines().map(_.split(delimiter)(SNP_NAME_COLUMN_POS)).toStream
   // Matrix storing all data from the .ped file
-  val PEDs: Stream[Array[String]] = Source.fromFile(pedFilePath, FILE_ENCODING).getLines().map(_.split(delimiter)).toStream
+  val PEDs: Stream[Array[String]] =
+    Source.fromFile(pedFilePath, FILE_ENCODING).getLines().map(_.split(delimiter)).toStream
   // List storing all sample names
   val sampleNames: Stream[String] = PEDs.map(x => {x(0) + x(1)})
 
   /**
-    * Parse the .ped and .map files and return the result as a DenseFileData object.
-    * @return A DenseFileData object storing parsed data
+    * Parse the .ped and .map files and return the result as a FileData object.
     */
-  def parseAndCreateDenseFileObject(): DenseFileData = {
-    new DenseFileData(
+  val fileData: FileData = {
+    new FileData(
       sampleNames=sampleNames.toVector,
       dataPairs=encodeSamplesForAllSNPs(PEDs, getAllMajorAndMinorAlleles(PEDs, SNPs))
     )
-  }
-
-  /**
-    * Parse the .ped and .map files and write the result to a output file.
-    * @param outputFilePath Path to the output file
-    */
-  def parseAndOutputToFile(outputFilePath: String): Unit = {
-
-    val file = new File(outputFilePath)
-    val bw = new BufferedWriter(new FileWriter(file))
-
-    val header = "HeaderLine" + delimiter + sampleNames.mkString(delimiter)
-    bw.write(header)
-    bw.write("\n")
-
-    val data = encodeSamplesForAllSNPs(PEDs, getAllMajorAndMinorAlleles(PEDs, SNPs))
-    val dataConcat = data.map(x => {x._1 + delimiter + x._2.toArray.mkString(delimiter)})
-    for (line <- dataConcat) {
-      bw.write(line)
-      bw.write("\n")
-    }
-
-    bw.flush()
-    bw.close()
   }
 
   /**
@@ -136,9 +110,9 @@ class PedMapParser(mapFilePath: String, pedFilePath: String, delimiter: String="
     * @param snpArray A list storing (SNP name, major allele, minor allele) for each SNP
     * @return A vector storing (SNP name, vector of encoded values for each sample) for each SNP
     */
-  private def encodeSamplesForAllSNPs(
-                                       pedMatrix: Stream[Array[String]],
-                                       snpArray: Vector[(String, String, String)]): Vector[(String, DenseVector[Double])] = {
+  private def encodeSamplesForAllSNPs(pedMatrix: Stream[Array[String]],
+                                      snpArray: Vector[(String, String, String)]
+                                     ): Vector[(String, DenseVector[Double])] = {
 
     val output = Vector.newBuilder[(String, DenseVector[Double])]
 

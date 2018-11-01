@@ -7,7 +7,7 @@ import org.junit.Assert._
 import org.junit._
 import breeze.linalg.DenseVector
 
-class SPAEMLDenseTest {
+class SPAEMLTest {
   /** Maximum acceptable difference between expected and actual values used in Assert statements */
   final val DELTA = 1e-5
   
@@ -29,14 +29,14 @@ class SPAEMLDenseTest {
 
   @Test
   def createPairwiseListTest() {
-    val actual = SPAEMLDense.createPairwiseList(List("x1","x2", "x3"))
+    val actual = SPAEML.createPairwiseList(List("x1","x2", "x3"))
     val expected = Seq(("x1", "x2"), ("x1", "x3"), ("x2", "x3"))
     assertEquals(expected, actual)
   }
 
   @Test
   def createPairwiseColumnTest() {
-    val actual = SPAEMLDense.createPairwiseColumn(("x1", "x2"), broadcastXTable)
+    val actual = SPAEML.createPairwiseColumn(("x1", "x2"), broadcastXTable)
     val expected = ("x1_x2",
                     DenseVector(182.0, 29.0, 616.0, 31.0, 108.0, 987.0, 40.0, 726.0, 680.0)
                    )
@@ -53,7 +53,7 @@ class SPAEMLDenseTest {
     val not_added_init = mutable.HashSet() ++ Vector("x1", "x2", "x3", "x4")
     val initial_collection = new StepCollections(not_added = not_added_init)
     
-    val reg = SPAEMLDense.performSteps(spark.sparkContext,
+    val reg = SPAEML.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",
@@ -117,7 +117,7 @@ class SPAEMLDenseTest {
     // Since we start with a term in the added previously category, we must add its values to the added previously map
     initial_collection.addedPrevValues.put("x3", broadcastXTable.value("x3"))
 
-    val reg = SPAEMLDense.performSteps(spark.sparkContext,
+    val reg = SPAEML.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",
@@ -170,7 +170,7 @@ class SPAEMLDenseTest {
                                                  skipped = skipped_init
                                                 )
     
-    val reg = SPAEMLDense.performSteps(spark.sparkContext,
+    val reg = SPAEML.performSteps(spark.sparkContext,
                                         stepDataRDD,
                                         broadcastYTable,
                                         "pheno",

@@ -2,10 +2,10 @@ import java.io.File
 import converters._
 
 case class Config(inputFiles: Seq[String] = Seq(),
-                  outputFile: String =  ".",
-                  inputType: String = "Custom",
+                  outputFile: String = ".",
+                  inputType: String = "custom",
                   deleteColumns: Seq[Int] = Seq(),
-                  transpose: Boolean = false,
+                  columnsAreVariants: Boolean = false,
                   delimiter: String = "\t"
                  )
 
@@ -54,11 +54,11 @@ object ConvertFormat {
       }
     }
 
-    opt[Boolean]('t', "transpose")
+    opt[Boolean]("columnsAreVariants")
       .optional
       .valueName("{ default = false }")
-      .text("Transpose the data")
-      .action( (x, c) => c.copy(transpose = x) )
+      .text("(custom mode only) Variants are stored in columns")
+      .action( (x, c) => c.copy(columnsAreVariants = x) )
 
     opt[Seq[Int]]("deleteColumns")
       .optional
@@ -72,7 +72,7 @@ object ConvertFormat {
     )
   }
 
-  def launch(args: Array[String]) = {
+  def launch(args: Array[String]): Unit = {
 
     val parsed = argParser.parse(args, Config())
 
@@ -88,15 +88,14 @@ object ConvertFormat {
         parsed.get.inputType.toLowerCase match {
           case "custom" => {
 
-            val inputFile = new File(parsed.get.inputFiles(0))
             val outputFile = new File(parsed.get.outputFile)
 
-            new CustomFileParser(
-              inputFile,
-              parsed.get.delimiter,
-              parsed.get.deleteColumns,
-              parsed.get.transpose
-            ).saveParsedFile(outputFile)
+            new CustomFileParser(parsed.get.inputFiles(0),
+                                 parsed.get.delimiter,
+                                 parsed.get.deleteColumns,
+                                 parsed.get.columnsAreVariants
+                                ).writeEpiqFile(outputFile)
+
             println("Conversion successful: new file can be found at: " + outputFile.getAbsolutePath)
           }
           case "pedmap" => {
@@ -112,7 +111,7 @@ object ConvertFormat {
               throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
             }
 
-            new PedMapParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
+            new PedMapParser(map(0), ped(0)).writeEpiqFile(new File(parsed.get.outputFile))
             println("Conversion successful: new file can be found at: " + parsed.get.outputFile)
           }
           case _ => throw new Error("Error: Invalid Input Type")

@@ -1,61 +1,36 @@
 package statistics
 
-import breeze.linalg.{DenseMatrix, Matrix}
+import breeze.linalg.{DenseMatrix, DenseVector, diag, pinv}
 import breeze.stats.distributions.StudentsT
 import breeze.stats.distributions.FDistribution
 import breeze.numerics.log
 
 
-abstract class OLSRegression(val xColumnNames: Array[String],
-                             val yColumnName: String,
-                             val Xs: Matrix[Double],
-                             val Y: breeze.linalg.Vector[Double]
-                            ) extends java.io.Serializable {
+class OLSRegression(val xColumnNames: Array[String],
+                    val yColumnName: String,
+                    val Xs: DenseMatrix[Double],
+                    val Y: breeze.linalg.DenseVector[Double]
+                   ) extends java.io.Serializable {
   // Good summary of formula's used
   // http://www.stat.ucla.edu/~nchristo/introeconometrics/introecon_matrixform.pdf
     
-  // breeze.linalg.Vector is a superclass of DenseVector and SparseVector
-  
-  /*
-   * ABSTRACT FUNCTIONS AND FIELDS
-   * 
-   * The goal of making these abstract is to allow one to use either dense or sparse
-   *   matrices/vectors during the calculations
-   *   
-   * All of the vals here must be made lazy vals in subclasses to avoid a null pointer exception
-   *
-   * See https://docs.scala-lang.org/tutorials/FAQ/initialization-order.html
-   * 
-   */
-  
   /*
    * Also called a design matrix
    * To estimate the intercept, a column of 1's is added to the matrix in the last position
    */
-  protected val XMatrixWith1sColumn: Matrix[Double]
 
-  protected val transposedX: Matrix[Double]
-  protected val inverseOfXtimesXt: Matrix[Double]
-  
-   /** Standard error for each coefficient; the final entry is for the intercept */
-  /*
-   * This is abstract since one must grab the diagonal of the inverseOfXtimesXt matrix,
-   *   and that method is specific to the matrix type
-   */
-  val standardErrors: breeze.linalg.Vector[Double]
-
-  def lastXColumnsValues(): breeze.linalg.Vector[Double]
-
-  val anovaTable: ANOVATable
-  
-  /*
-   * CONCRETE FUNCTIONS AND FIELDS
-   */
   def sum(v: breeze.linalg.Vector[Double]): Double = v.reduce((x,y) => x + y)
   def sumOfSquared(i: breeze.linalg.Vector[Double]): Double = sum( i.map(math.pow(_, 2)))
   
   // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values
   protected def replaceZero(x: Double): Double = if (x == 0.0) 0.000001 else x
+
+  // To estimate the intercept, a column of 1's is added to the matrix in the last position
+  lazy val XMatrixWith1sColumn: DenseMatrix[Double] = {
+    val ones: Array[Double] = Array.fill(Xs.rows)(1.0)
+    val flattenedValues: Array[Double] = Xs.toArray ++ ones
+    new DenseMatrix(Xs.rows, Xs.cols + 1, flattenedValues)
+  }
 
   val meanY: Double = sum(Y) / Y.length
   lazy val N: Int = Y.size
@@ -71,7 +46,15 @@ abstract class OLSRegression(val xColumnNames: Array[String],
     
   /** n - k */
   val DoF_error: Int = N - k
-  
+
+  val transposedX: DenseMatrix[Double] = XMatrixWith1sColumn.t
+
+  /* Uses pseudoinverse, as it will solve the SinglarMatrixException problem
+   *   And all of the jUnit tests still passed, suggesting that the answers
+   *   are still comparable to R's
+   */
+  val inverseOfXtimesXt = pinv(transposedX * XMatrixWith1sColumn)
+
   /** The estimates of the coefficients; the last entry is the estimate of the intercept */
   val coefficients: breeze.linalg.Vector[Double] = inverseOfXtimesXt * transposedX * Y
     
@@ -166,7 +149,14 @@ abstract class OLSRegression(val xColumnNames: Array[String],
    * Residual Standard Error (known as RSE)
    */
   lazy val residualStandardError: Double = math.sqrt( RSS / degreesOfFreedom )
-  
+
+  /** Standard error for each coefficient; the final entry is for the intercept */
+  lazy val standardErrors: DenseVector[Double] = {
+    val initial = diag(inverseOfXtimesXt).map(math.sqrt(_) * residualStandardError)
+    val filtered = initial.map(replaceZero)
+    filtered
+  }
+
   // http://avesbiodiv.mncn.csic.es/estadistica/ejemploaic.pdf
  // lazy val AIC = N * breeze.numerics.log(RSS/N) + 2*k
   
@@ -209,6 +199,22 @@ abstract class OLSRegression(val xColumnNames: Array[String],
     
     (firstLine +: finalRows).mkString("")
   }
+
+  def lastXColumnsValues(): DenseVector[Double] = {
+    // Last column position (the very last position (k - 1) is the 1's column used to estimate the intercept)
+    val pos = k - 2
+    DenseVector(
+      // The ':_*' unpacks the values in the collection and passes them each to the DenseVector constructor
+      (0 until N).map( XMatrixWith1sColumn(_, pos) ) :_*
+    )
+  }
+
+  /*
+ This must be lazy, because the AVOVATable class itself creates an instance of this object, but without looking
+   at its anova results. If this weren't lazy, it will create an loop of object creation,
+   where OLSRegression -> ANOVATable -> OLSRegression -> ANOVATable -> ...
+ */
+  lazy val anovaTable: ANOVATable = new ANOVATable(this)
 
   /** Prints a summary of the regression, in a format similar to R's summary */
   def printSummary(): Unit = {

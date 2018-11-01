@@ -128,7 +128,7 @@ object StepwiseModelSelection {
         }
 
         spark.sparkContext.setLogLevel("ERROR")
-        SPAEMLDense.performSPAEML(
+        SPAEML.performSPAEML(
           spark,
           parsed.get.epiqInputFile,
           parsed.get.pedInputFile,
