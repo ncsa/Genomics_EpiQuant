@@ -1,4 +1,5 @@
 import spaeml._
+import lasso._
 import org.apache.spark.sql.SparkSession
 import loggers.EpiQuantLogger
 
@@ -13,7 +14,8 @@ case class InputConfig(
                         threshold: Double = 0.05,
                         shouldSerialize: Boolean = false,
                         sparkMaster: String = "local",
-                        epistatic: Boolean = true
+                        epistatic: Boolean = true,
+                        lasso: Boolean = false
                       )
                       
 object StepwiseModelSelection {
@@ -51,6 +53,10 @@ object StepwiseModelSelection {
       .valueName("<file>")
       .action( (x, c) => c.copy(mapInputFile = x) )
       .text("Path to the .map genotype input file")
+
+    opt[Unit]("lasso")
+        .action( (_, c) => c.copy(lasso = true))
+        .text("Set this flag to train and output a LASSO model")
 
     opt[Unit]("aws")
       .action( (_, c) => c.copy(isOnAws = true) )
@@ -127,20 +133,34 @@ object StepwiseModelSelection {
         }
 
         spark.sparkContext.setLogLevel("ERROR")
-        SPAEML.performSPAEML(
-          spark,
-          parsed.get.epiqInputFile,
-          parsed.get.pedInputFile,
-          parsed.get.mapInputFile,
-          parsed.get.phenotypeInputFile,
-          parsed.get.outputDirectoryPath,
-          parsed.get.isOnAws,
-          parsed.get.s3BucketName,
-          parsed.get.threshold,
-          parsed.get.epistatic,
-          parsed.get.shouldSerialize
-        )
 
+        if (parsed.get.lasso) {
+          LASSO.performLASSO(
+            spark,
+            parsed.get.epiqInputFile,
+            parsed.get.pedInputFile,
+            parsed.get.mapInputFile,
+            parsed.get.phenotypeInputFile,
+            parsed.get.outputDirectoryPath,
+            parsed.get.isOnAws,
+            parsed.get.s3BucketName,
+            parsed.get.shouldSerialize
+          )
+        } else {
+          SPAEML.performSPAEML(
+            spark,
+            parsed.get.epiqInputFile,
+            parsed.get.pedInputFile,
+            parsed.get.mapInputFile,
+            parsed.get.phenotypeInputFile,
+            parsed.get.outputDirectoryPath,
+            parsed.get.isOnAws,
+            parsed.get.s3BucketName,
+            parsed.get.threshold,
+            parsed.get.epistatic,
+            parsed.get.shouldSerialize
+          )
+        }
       }
     }  
   }
