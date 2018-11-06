@@ -4,13 +4,14 @@ import breeze.linalg.{DenseMatrix, DenseVector, diag, pinv}
 import breeze.stats.distributions.StudentsT
 import breeze.stats.distributions.FDistribution
 import breeze.numerics.log
-
+import loggers.EpiQuantLogger
 
 class OLSRegression(val xColumnNames: Array[String],
                     val yColumnName: String,
                     val Xs: DenseMatrix[Double],
                     val Y: breeze.linalg.DenseVector[Double]
                    ) extends java.io.Serializable {
+
   // Good summary of formula's used
   // http://www.stat.ucla.edu/~nchristo/introeconometrics/introecon_matrixform.pdf
     
@@ -172,8 +173,8 @@ class OLSRegression(val xColumnNames: Array[String],
   /** Key is the name of the X variable, the value is the p-value associated with it */
   lazy val pValueMap: Map[String, Double] = (xColumnNames :+ "intercept").zip(pValues).toMap
 
-  /** A summary of the regression stored as a single string ('\n' are included) */
-  lazy val summaryString: String = {
+  /** Array of lines representing a summary of the model */
+  lazy val summaryStrings: Array[String] = {
     
     def standardizeLengths(arr: Array[String], rightPadding: Boolean = false) = {
       val maxLength = arr.map(_.length).max
@@ -193,11 +194,11 @@ class OLSRegression(val xColumnNames: Array[String],
     val nameCol = standardizeLengths(names, rightPadding = true)
     val cols = nameCol +: Array(estimate, stdErr, tStat, pValue).map(standardizeLengths(_))
         
-    val joinRow = (row: Array[String]) => (row :+ "\n").mkString
+    val joinRow = (row: Array[String]) => (row).mkString
     val finalRows = cols.transpose.map(joinRow)
-    val firstLine = "The Response variable: " + yColumnName + "\n\n"
+    val firstLine = "The Response variable: " + yColumnName
     
-    (firstLine +: finalRows).mkString("")
+    firstLine +: finalRows
   }
 
   def lastXColumnsValues(): DenseVector[Double] = {
@@ -216,9 +217,9 @@ class OLSRegression(val xColumnNames: Array[String],
  */
   lazy val anovaTable: ANOVATable = new ANOVATable(this)
 
-  /** Prints a summary of the regression, in a format similar to R's summary */
-  def printSummary(): Unit = {
-    println(summaryString)
+  /** Logs a summary of the regression, in a format similar to R's summary */
+  def logSummary(): Unit = {
+    EpiQuantLogger.info(summaryStrings.mkString("\n\t"))
   }
 }
 

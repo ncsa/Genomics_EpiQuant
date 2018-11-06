@@ -12,7 +12,7 @@ import converters.PedMapParser
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.storage.StorageLevel
 import dataformats.FileData
-
+import loggers.EpiQuantLogger
 import scala.annotation.tailrec
 
 /*
@@ -30,7 +30,7 @@ object SPAEML extends Serializable {
     * @return Full path of the S3 object with the proper prefix
     */
   def getFullS3Path(s3BucketName: String, filePath: String): String = {
-    return "s3://" + s3BucketName + "/" + filePath
+    "s3://" + s3BucketName + "/" + filePath
   }
 
   /**
@@ -62,7 +62,7 @@ object SPAEML extends Serializable {
 
     if (fs.exists(outDirPath)) {
       fs.delete(outDirPath, true)
-      println("Deleting output directory: " + outDirPath)
+      EpiQuantLogger.info("Deleting output directory: " + outDirPath)
     }
   }
 
@@ -132,10 +132,6 @@ object SPAEML extends Serializable {
     writer.close()
   }
 
-/*}
-
-class SPAEML extends Serializable {
-*/
   // Implicit function needed for the "flatten" method to work on a DenseVector
   implicit val DenseVector2ScalaVector: DenseVector[Double] => Vector[Double] =
     (s: DenseVector[Double]) => s.toScalaVector
@@ -172,23 +168,48 @@ class SPAEML extends Serializable {
   }
 
   /**
-    * 1. Broadcast the original SNP table throughout the cluster
-    * 2. Create and distribute a Vector of columnName pairs for the SNP table
-    * 3. On each Executor, create the SNP pairs for the columnName pairs on that Executor
-    * 4. Perform all of the regressions in a Map and Reduce style
+    * Construct a regression model associating the phenotype with the genotype data using the SPAEML algorithm
+    *
+    * SPAEML procedure:
+    *
+    *  Forward Step:
+    *    1. For each variant (SNP) not included in the model, create a new model with the variant included
+    *    2. Out of all of the models that were created, select the model where the newly added term best fits the
+    *         selection criterion (e.g. has the lowest p-value)
+    *    3. Verify that the newest term's selection criterion meets the threshold (e.g. the newest terms p-value is
+    *         below the p-value threshold)
+    *  Backward Step:
+    *    4. Remove any terms that were added to the model previously that no longer meet the threshold
+    *  Repeat Steps:
+    *    5. Repeat this procedure until
+    *        a). All possible terms have been included in the model
+    *        b). The newest term's selection criterion does not meet the threshold (in this case, return the previous
+    *            iterations best model)
+    *
+    * @param spark the running SparkContext
+    * @param snpDataRDD key-value RDD where the name of each variant points to their values for each sample
+    * @param broadcastPheno broadcasted map of the phenotype data where each phenotype name points their values
+    * @param phenoName name of the phenotype used as the response variable in the model
+    * @param collections an object storing the state of the model after previous iterations
+    * @param threshold the p-value threshold used while model building
+    * @param prev_best_model previous iteration's best model (returned if the new best model doesn't meet the threshold)
+    * @param iterations counter tracking how many iterations have passed
+    *
+    * @return the regression model produced by applying the SPAEML algorithm to the genotype/phenotype data
     */
   @tailrec
   final def performSteps(spark: SparkContext,
-                   snpDataRDD: rdd.RDD[(String, DenseVector[Double])],
-                   broadcastPheno: Broadcast[Map[String, DenseVector[Double]]],
-                   phenoName: String,
-                   collections: StepCollections,
-                   threshold: Double,
-                   prev_best_model: OLSRegression = null,
-                   iterations: Int = 1
-                  ): OLSRegression = {
+                         snpDataRDD: rdd.RDD[(String, DenseVector[Double])],
+                         broadcastPheno: Broadcast[Map[String, DenseVector[Double]]],
+                         phenoName: String,
+                         collections: StepCollections,
+                         threshold: Double,
+                         prev_best_model: OLSRegression = null,
+                         iterations: Int = 1
+                         ): OLSRegression = {
 
-    println("Iteration number: " + iterations.toString)
+    EpiQuantLogger.info("SPAEML model-building iteration number: " + iterations.toString)
+
     /*
      *  LOCAL FUNCTIONS
      */
@@ -214,19 +235,18 @@ class SPAEML extends Serializable {
       *    on this iteration)
       */
     def mapFunction(inputSnp: (String, DenseVector[Double])): Option[OLSRegression] = {
-
       // If the inputSnp is in the not_added category
       if ( collections.getNotAdded.contains(inputSnp._1) ) {
-        val yVals = broadcastPheno.value(phenoName)
+
         val xColNames = collections.getAddedPrev.toArray
+
+        val xVals = xColNames.flatMap(collections.addedPrevValues(_))
+        val yVals = broadcastPheno.value(phenoName)
 
         val numRows = yVals.length
         val numCols = xColNames.length
 
-        val xVals = xColNames.flatMap(collections.addedPrevValues(_))
-
         val newXColNames = xColNames :+ inputSnp._1
-
         val newXVals: Array[Double] = xVals ++ inputSnp._2
         val newXValsAsMatrix = new DenseMatrix(numRows, numCols + 1, newXVals)
 
@@ -238,7 +258,7 @@ class SPAEML extends Serializable {
     }
 
     /**
-      * Return the best model (non-deterministic when there are ties; as the tie is broken arbitrarily
+      * Return the best model (non-deterministic when there are ties; as the tie is broken arbitrarily)
       */
     def reduceFunction(inputRDD: rdd.RDD[Option[OLSRegression]]): OLSRegression = {
       val filtered = inputRDD.filter(x => x.isDefined).map(_.get)
@@ -260,14 +280,12 @@ class SPAEML extends Serializable {
     def rebuildModel(): OLSRegression = {
       val xNames: Array[String] = collections.getAddedPrev.toArray
       val xVals: Array[Double] = xNames.flatMap(collections.addedPrevValues(_).toScalaVector())
-
       val yVals = broadcastPheno.value(phenoName)
 
       val numRows = yVals.length
       val numCols = xNames.length
 
       val xValsMatrix: DenseMatrix[Double] = new DenseMatrix(numRows, numCols, xVals)
-
       new OLSRegression(xNames, phenoName, xValsMatrix, yVals)
     }
     /*
@@ -282,7 +300,7 @@ class SPAEML extends Serializable {
     val mappedValues: rdd.RDD[Option[OLSRegression]] = snpDataRDD.map(mapFunction)
     val bestRegression: OLSRegression = reduceFunction(mappedValues)
 
-    bestRegression.printSummary()
+    bestRegression.logSummary()
 
     // If the p-value of the newest term does not meet the threshold, return the prev_best_model
     if (getNewestTermsPValue(bestRegression) >= threshold) {
@@ -338,7 +356,6 @@ class SPAEML extends Serializable {
     }
   }
 
-
   protected def flattenArrayOfBreezeVectors(input: Array[breeze.linalg.Vector[Double]]): Array[Double] = {
     input.flatMap(breezeVector => breezeVector.toDenseVector.toScalaVector)
   }
@@ -357,22 +374,20 @@ class SPAEML extends Serializable {
     }
   }
 
-  protected def constructTimeString(startTime: Long, endTime: Long): String = {
+  private def constructTimeStrings(startTime: Long, endTime: Long): Vector[String] = {
     val seconds = (endTime - startTime) / 1e9
     val minutes = seconds / 60.0
     val hours = minutes / 60.0
 
-    val getTimeString = (s: String, d: Double) => "Calculation time (in " + s + "): " + d.toString + "\n"
-    val timeString = getTimeString("seconds", seconds) + getTimeString("minutes", minutes) + getTimeString("hours", hours)
-    timeString
+    val getTimeString = (s: String, d: Double) => "Calculation time (in " + s + "): " + f"$d%1.5f"
+    Vector(getTimeString("seconds", seconds),  getTimeString("minutes", minutes), getTimeString("hours", hours))
   }
 
   /**
     * Read in the genotype and phenotype files, perform SPAEML model building, and write the resulting model to a file
     *
     *   Detailed steps:
-    *     1. Read in the data from the genotype and phenotype files (in the ".epiq" format, where the columns are
-    *        sample names and the rows are SNP names/phenotype names)
+    *     1. Read in the data from the genotype and phenotype files
     *
     *     2. Make sure the sample names match up exactly between the two files (error out if not)
     *     3. broadcast (send a read-only copy of) the original SNP data map (SNP_name -> [values]) to each executor
@@ -391,6 +406,17 @@ class SPAEML extends Serializable {
     *
     *     9. For each phenotype, call the performSteps function
     *
+    * @param spark the running SparkSession instance
+    * @param epiqFileName path of the epiq-formated genotype file (empty if input not in epiq format)
+    * @param pedFileName path of the ped-formated genotype file (empty if input the ped/map format is not used)
+    * @param mapFileName path of the map-formated genotype file (empty if input the ped/map format is not used)
+    * @param phenotypeFileName path to the epiq-formated phenotype file
+    * @param outputDirectoryPath path of the output directory
+    * @param isOnAws is the program being run on AWS
+    * @param s3BucketName the AWS S3 bucket (if AWS is being used)
+    * @param threshold the p-value threshold used during SPAEML model building
+    * @param epistatic consider pairwise combinations of genotypic terms during model building
+    * @param shouldSerialize should data be stored serially (reduced memory footprint; longer reading time)
     */
   def performSPAEML(spark: SparkSession,
                     epiqFileName: String,
@@ -401,9 +427,9 @@ class SPAEML extends Serializable {
                     isOnAws: Boolean,
                     s3BucketName: String,
                     threshold: Double,
-                    shouldSerialize: Boolean,
-                    epistatic: Boolean
-                 ) {
+                    epistatic: Boolean,
+                    shouldSerialize: Boolean
+                   ) {
 
     val totalStartTime = System.nanoTime()
 
@@ -421,68 +447,37 @@ class SPAEML extends Serializable {
       }
     }
 
-    val phenotypeData = if (isOnAws) {
-      readHDFSFile(SPAEML.getFullS3Path(s3BucketName, phenotypeFileName), spark.sparkContext)
-    } else {
-      readHDFSFile(phenotypeFileName, spark.sparkContext)
+    val phenotypeData = {
+      if (isOnAws) readHDFSFile(SPAEML.getFullS3Path(s3BucketName, phenotypeFileName), spark.sparkContext)
+      else readHDFSFile(phenotypeFileName, spark.sparkContext)
     }
 
     if (phenotypeData.sampleNames != snpData.sampleNames) {
       throw new Error("Sample order did not match between the SNP and Phenotype input files")
     }
 
-    /*
-     * From now on, the numbers are assumed to be in the same sample order between the genotypes and phenotypes
-     * (In other words, it assumes the samples names A,B,C,... N from the two tables below are in the same order)
-     *
-     *   (Original genotype file)               (Original phenotype file)
-     *
-     *   Sample SNP1 SNP2 SNP3 ... SNPM         Sample  Pheno1  Pheno2 ...
-     *   A      A1   A2   A3       AM           A       A_Ph1   A_Ph2
-     *   B      B1   B2   B3       BM           B       B_Ph1   B_Ph2
-     *   C      C1   C2   C3       CM           C       C_Ph1   C_Ph2
-     *   ...                                    ...
-     *   N      N1   N2   N3       NM           N       N_Ph1   N_PhN
-     *
-     *   Before this program is executed, the files are reformatted, and the columns and rows are transposed
-     *   (this makes reading the data into Spark easier, i.e. we can read in one SNP/phenotype entry per line)
-     *
-     *   The reformatted (".epiq" formatted) files
-     *      (A string called "Placeholder" is put in the top-left corner to make everything line up easily)
-     *
-     *   (genotype ".epiq" file)                  (phenotype ".epiq" file)
-     *   Placeholder A   B   C  ... N           Placeholder A      B      C     ... N
-     *   SNP1        A1  B1  C1     N1          Pheno1      A_Ph1  B_Ph1  C_Ph1     N_Ph1
-     *   SNP2        A2  B2  C2     N2          Pheno2      A_Ph2  B_Ph2  C_Ph2     N_Ph2
-     *   SNP3        A3  B3  C3     N3          ...
-     *   ...
-     *   SNPM        AM  BM  CM     NM
-     */
-
     // Broadcast original SNP map where (SNP_name -> [SNP_values])
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
 
-    val storageLevel = {
-      if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER
-      else StorageLevel.MEMORY_AND_DISK
-    }
+    val storageLevel = if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER else StorageLevel.MEMORY_AND_DISK
 
     // Parallelize the original table into an RDD
     val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
 
-    val fullSnpRDD = if (epistatic) {
+    val fullSnpRDD = {
+      if (epistatic) {
+        // Spread Vector of pairwise SNP_name combinations across cluster
+        val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
+        val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
 
-      // Spread Vector of pairwise SNP_name combinations across cluster
-      val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
-      val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
+        // Create the pairwise combinations across the cluster
+        val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
 
-      // Create the pairwise combinations across the cluster
-      val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-
-      (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
-    } else {
-      singleSnpRDD.persist(storageLevel)
+        (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+      } else {
+        singleSnpRDD.persist(storageLevel)
+      }
     }
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
@@ -494,51 +489,50 @@ class SPAEML extends Serializable {
 
     // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
     //   All SNPs start in the not_added category
-    val initialCollections = new StepCollections(not_added = snpNames)
+    val initCollections = new StepCollections(not_added = snpNames)
 
     /*
-     *  For each phenotype, build a model, println and save the results
+     *  For each phenotype, build a model, log and save the results
      */
     for (phenotype <- phenotypeNames) {
 
       val startTime = System.nanoTime()
 
-      val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast,
-                                 phenotype, initialCollections, threshold
-                                )
+      // Build the model for the given phenotype
+      val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast, phenotype, initCollections, threshold)
 
       val endTime = System.nanoTime()
 
-      val timeString = constructTimeString(startTime, endTime)
-      val summaryString = bestReg.summaryString
-      val anovaSummaryString = bestReg.anovaTable.summaryString
+      // Time the current model building process
+      val timeStrings: Vector[String] = constructTimeStrings(startTime, endTime)
 
-      // Include both the standard R-like regression output and the ANOVA table style output
-      val genotypeFileNames = if (epiqFileName.isEmpty) {
-        pedFileName + " " + mapFileName
-      } else {
-        epiqFileName
+      // Create the ANOVA summary table
+      val anovaSummaryString: String = bestReg.anovaTable.summaryStrings.mkString("\n")
+
+      val genotypeFileNames = if (epiqFileName.isEmpty) pedFileName + ", " + mapFileName else epiqFileName
+
+      val output: Vector[String] = {
+        timeStrings ++
+          Vector("Genotype File(s): " + genotypeFileNames, "Phenotype File: " + phenotypeFileName, anovaSummaryString)
       }
 
-      val output = Array(timeString,
-                         "Genotype File: " + genotypeFileNames,
-                         "Phenotype File: " + phenotypeFileName + "\n",
-                         summaryString + "\n",
-                         anovaSummaryString
-                        )
-
-      // Print
-      output.foreach(println)
+      // Log the final model built
+      output.foreach(EpiQuantLogger.info(_))
 
       // Save to file
-      SPAEML.writeToOutputFile(
-        spark, isOnAws, s3BucketName, outputDirectoryPath, phenotype + ".summary", output.mkString("\n")
-      )
-
+      SPAEML.writeToOutputFile(spark,
+                               isOnAws,
+                               s3BucketName,
+                               outputDirectoryPath,
+                               phenotype + ".summary",
+                               output.mkString("\n")
+                              )
     }
 
     val totalEndTime = System.nanoTime()
-    val totalTimeString = "\nTotal runtime (seconds): " + ((totalEndTime - totalStartTime) / 1e9).toString
+
+    // Save the overall run time
+    val totalTimeString: String = constructTimeStrings(totalStartTime, totalEndTime).mkString("\n")
 
     SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, "total_time.log", totalTimeString)
   }
