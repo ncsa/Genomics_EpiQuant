@@ -220,13 +220,13 @@ object SPAEML extends Serializable {
       *  This returns the second to last p-value of the input OLSRegression,
       *    as it assumes the last one is associated with the intercept
       */
-    val getNewestTermsPValue = (reg: OLSRegression) => {
+    def getNewestTermsPValue(reg: OLSRegression): Double = {
       // Drop the estimate of the intercept and return the p-value of the most recently added term
       reg.pValues.toArray.dropRight(1).last
     }
 
-    val getNewestTermsName = (reg: OLSRegression) => reg.xColumnNames.last
-    val getNewestTermsValues = (reg: OLSRegression) => reg.lastXColumnsValues().toDenseVector
+    def getNewestTermsName(reg: OLSRegression): String = reg.xColumnNames.last
+    def getNewestTermsValues(reg: OLSRegression): DenseVector[Double] = reg.lastXColumnsValues().toDenseVector
 
     /**
       * Returns a OLSRegression object if the inputSnp is in the NotAdded category
