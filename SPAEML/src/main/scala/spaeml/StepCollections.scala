@@ -1,5 +1,7 @@
 package spaeml
 
+import loggers.EpiQuantLogger
+
 import scala.collection.mutable
 
 /**
@@ -49,14 +51,19 @@ class StepCollections(not_added: mutable.HashSet[String],
 
   def moveFromNotAdded2AddedPrev(snpName: String, snpValues: breeze.linalg.DenseVector[Double]): Unit = {
     moveFrom(not_added, added_prev, snpName)
+    EpiQuantLogger.debug("Moved " + snpName + " from NOT ADDED to ADDED PREVIOUSLY")
     addedPrevValues.put(snpName, snpValues)
   }
 
   def moveFromAddedPrev2Skipped(snpName: String): Unit = {
     moveFrom(added_prev, skipped, snpName)
+    EpiQuantLogger.debug("Moved " + snpName + " from ADDED PREVIOUSLY to SKIPPED")
     addedPrevValues.remove(snpName)
   }
 
-  def moveFromSkipped2NotAdded(snpName: String): Unit = moveFrom(skipped, not_added, snpName)
+  def moveFromSkipped2NotAdded(snpName: String): Unit = {
+    EpiQuantLogger.debug("Moved " + snpName + " from SKIPPED to NOT ADDED")
+    moveFrom(skipped, not_added, snpName)
+  }
 
 }

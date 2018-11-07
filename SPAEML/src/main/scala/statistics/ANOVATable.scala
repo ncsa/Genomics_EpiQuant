@@ -1,7 +1,7 @@
 package statistics
 
 import breeze.linalg.DenseMatrix
-import breeze.stats.distributions.{FDistribution}
+import breeze.stats.distributions.FDistribution
 
 import scala.collection.mutable.ArrayBuffer
 

@@ -1,5 +1,6 @@
 import spaeml._
 import org.apache.spark.sql.SparkSession
+import loggers.EpiQuantLogger
 
 case class InputConfig(
                         epiqInputFile: String = "",
@@ -107,9 +108,7 @@ object StepwiseModelSelection {
     parsed match {
 
       // Received invalid or incomplete arguments
-      case None => {
-        System.err.println("\nError: Invalid/incomplete arguments")
-      }
+      case None => EpiQuantLogger.error("Invalid/incomplete arguments", new Error)
 
       // Received valid arguments
       case Some(_) => {
