@@ -15,11 +15,6 @@ import dataformats.FileData
 import loggers.EpiQuantLogger
 import scala.annotation.tailrec
 
-/*
- *  Having a different threshold for the forward and backward steps can lead to oscillations
- *    where an X is included under high p-value, then skipped, then included again, ... and this goes on forever
- */
-
 object SPAEML extends Serializable {
 
   /**
@@ -35,6 +30,7 @@ object SPAEML extends Serializable {
 
   /**
     * Check if the output directory already exists, and delete the directory if it does.
+    *
     * @param spark The Spark session object
     * @param isOnAws Boolean indicating if the program is running on AWS
     * @param s3BucketName The S3 bucket name (only used if running on AWS)
@@ -258,7 +254,7 @@ object SPAEML extends Serializable {
     }
 
     /**
-      * Return the best model (non-deterministic when there are ties; as the tie is broken arbitrarily)
+      * Return the best model in the RDD (non-deterministic when there are ties; as the tie is broken arbitrarily)
       */
     def reduceFunction(inputRDD: rdd.RDD[Option[OLSRegression]]): OLSRegression = {
       val filtered = inputRDD.filter(x => x.isDefined).map(_.get)
@@ -367,13 +363,21 @@ object SPAEML extends Serializable {
    *    of the two with this function
    */
   def createPairwiseList(columnNames: Seq[String]): Seq[(String, String)] = {
-    // Creates a Vector of all pairwise combinations of each column (names only, does not
-    //   actually compute the new values: that will be done per partition)
+    // Creates a Vector of all pairwise combinations of each column name
     for (i <- columnNames.indices; j <- i + 1 until columnNames.length) yield {
       (columnNames(i), columnNames(j))
     }
   }
 
+  /**
+    * Returns a set of strings that represent how much time has elapsed
+    *
+    * The strings are formatted: "Calculation time (in <seconds | minutes | hours>): <time>"
+    *
+    * @param startTime The start time in nanoseconds since the current epoch
+    * @param endTime The end time in nanoseconds since the current epoch
+    * @return A vector with the elapsed time in seconds, minutes, and hours
+    */
   private def constructTimeStrings(startTime: Long, endTime: Long): Vector[String] = {
     val seconds = (endTime - startTime) / 1e9
     val minutes = seconds / 60.0
@@ -387,9 +391,9 @@ object SPAEML extends Serializable {
     * Read in the genotype and phenotype files, perform SPAEML model building, and write the resulting model to a file
     *
     *   Detailed steps:
-    *     1. Read in the data from the genotype and phenotype files
+    *     1. Read in the genotype/phenotype data
     *
-    *     2. Make sure the sample names match up exactly between the two files (error out if not)
+    *     2. Ensure the sample names match up between the two files
     *     3. broadcast (send a read-only copy of) the original SNP data map (SNP_name -> [values]) to each executor
     *
     *     4. On the driver, compute all of the non-redundant pairwise combinations of the SNP_names, and spread those
@@ -402,7 +406,7 @@ object SPAEML extends Serializable {
     *          the pairwise SNP to create the fullSnpRDD (and set it to persist with the desired serialization level)
     *
     *     7. Broadcast the phenotype data map (Phenotype_name -> [values]) to each executor
-    *     8. Initialize the StepCollections case class with all of the SNP_names put in the "not_added" category
+    *     8. Initialize the StepCollections class with all of the SNP_names placed in the "not_added" category
     *
     *     9. For each phenotype, call the performSteps function
     *
@@ -411,7 +415,7 @@ object SPAEML extends Serializable {
     * @param pedFileName path of the ped-formated genotype file (empty if input the ped/map format is not used)
     * @param mapFileName path of the map-formated genotype file (empty if input the ped/map format is not used)
     * @param phenotypeFileName path to the epiq-formated phenotype file
-    * @param outputDirectoryPath path of the output directory
+    * @param outputDir path of the output directory
     * @param isOnAws is the program being run on AWS
     * @param s3BucketName the AWS S3 bucket (if AWS is being used)
     * @param threshold the p-value threshold used during SPAEML model building
@@ -423,7 +427,7 @@ object SPAEML extends Serializable {
                     pedFileName: String,
                     mapFileName: String,
                     phenotypeFileName: String,
-                    outputDirectoryPath: String,
+                    outputDir: String,
                     isOnAws: Boolean,
                     s3BucketName: String,
                     threshold: Double,
@@ -433,7 +437,7 @@ object SPAEML extends Serializable {
 
     val totalStartTime = System.nanoTime()
 
-    if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
+    if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDir)) {
       throw new Error("Output directory already exists. Either remove the directory or output to a different directory.")
     }
 
@@ -495,7 +499,6 @@ object SPAEML extends Serializable {
      *  For each phenotype, build a model, log and save the results
      */
     for (phenotype <- phenotypeNames) {
-
       val startTime = System.nanoTime()
 
       // Build the model for the given phenotype
@@ -511,22 +514,14 @@ object SPAEML extends Serializable {
 
       val genotypeFileNames = if (epiqFileName.isEmpty) pedFileName + ", " + mapFileName else epiqFileName
 
-      val output: Vector[String] = {
-        timeStrings ++
-          Vector("Genotype File(s): " + genotypeFileNames, "Phenotype File: " + phenotypeFileName, anovaSummaryString)
-      }
+      val output: Vector[String] = timeStrings ++
+        Vector("Genotype File(s): " + genotypeFileNames, "Phenotype File: " + phenotypeFileName, anovaSummaryString)
 
       // Log the final model built
       output.foreach(EpiQuantLogger.info(_))
 
       // Save to file
-      SPAEML.writeToOutputFile(spark,
-                               isOnAws,
-                               s3BucketName,
-                               outputDirectoryPath,
-                               phenotype + ".summary",
-                               output.mkString("\n")
-                              )
+      SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype + ".summary", output.mkString("\n"))
     }
 
     val totalEndTime = System.nanoTime()
@@ -534,7 +529,7 @@ object SPAEML extends Serializable {
     // Save the overall run time
     val totalTimeString: String = constructTimeStrings(totalStartTime, totalEndTime).mkString("\n")
 
-    SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDirectoryPath, "total_time.log", totalTimeString)
+    SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, "total_time.log", totalTimeString)
   }
 
 }
