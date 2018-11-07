@@ -1,6 +1,7 @@
 package spaeml
 
 import statistics._
+import statistics.ANOVATable
 import java.net.URI
 
 import scala.collection.mutable
@@ -510,7 +511,9 @@ object SPAEML extends Serializable {
       val timeStrings: Vector[String] = constructTimeStrings(startTime, endTime)
 
       // Create the ANOVA summary table
-      val anovaSummaryString: String = bestReg.anovaTable.summaryStrings.mkString("\n")
+      val anovaTable = new ANOVATable(bestReg)
+      val anovaSummaryString: String = anovaTable.summaryStrings.mkString("\n")
+
 
       val genotypeFileNames = if (epiqFileName.isEmpty) pedFileName + ", " + mapFileName else epiqFileName
 

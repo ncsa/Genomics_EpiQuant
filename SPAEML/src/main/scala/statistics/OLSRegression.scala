@@ -24,7 +24,7 @@ class OLSRegression(val xColumnNames: Array[String],
   def sumOfSquared(i: breeze.linalg.Vector[Double]): Double = sum( i.map(math.pow(_, 2)))
   
   // To prevent Std.Errors = 0 causing the T statistic to be NaN, we replace any zeroes with small, non-zero values
-  protected def replaceZero(x: Double): Double = if (x == 0.0) 0.000001 else x
+  private def replaceZero(x: Double): Double = if (x == 0.0) 0.000001 else x
 
   // To estimate the intercept, a column of 1's is added to the matrix in the last position
   lazy val XMatrixWith1sColumn: DenseMatrix[Double] = {
@@ -209,13 +209,6 @@ class OLSRegression(val xColumnNames: Array[String],
       (0 until N).map( XMatrixWith1sColumn(_, pos) ) :_*
     )
   }
-
-  /*
- This must be lazy, because the AVOVATable class itself creates an instance of this object, but without looking
-   at its anova results. If this weren't lazy, it will create an loop of object creation,
-   where OLSRegression -> ANOVATable -> OLSRegression -> ANOVATable -> ...
- */
-  lazy val anovaTable: ANOVATable = new ANOVATable(this)
 
   /** Logs a summary of the regression, in a format similar to R's summary */
   def logSummary(): Unit = {
