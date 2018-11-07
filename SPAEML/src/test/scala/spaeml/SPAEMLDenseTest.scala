@@ -59,7 +59,7 @@ class SPAEMLTest {
                                         "pheno",
                                         initial_collection,
                                         0.05                                     
-                                       )                                     
+                                       ).get
                                        
     assertEquals(Vector("x2", "x1"), reg.xColumnNames.toVector)
     assertEquals("x1", reg.xColumnNames.last)
@@ -123,8 +123,8 @@ class SPAEMLTest {
                                         "pheno",
                                         initial_collection,
                                         0.05
-                                       )
-    println(reg.summaryString)
+                                       ).get
+    reg.summaryStrings.foreach(println)
 
     assertEquals(Vector("x1"), reg.xColumnNames.toVector)
     assertEquals("x1", reg.xColumnNames.last)
@@ -176,7 +176,7 @@ class SPAEMLTest {
                                         "pheno",
                                         initial_collection,
                                         0.05
-                                       )
+                                       ).get
     
     assertEquals(Vector("x1", "x2"), reg.xColumnNames.toVector)
     assertEquals("x2", reg.xColumnNames.last)

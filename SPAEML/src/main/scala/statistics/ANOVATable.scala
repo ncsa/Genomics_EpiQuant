@@ -1,7 +1,7 @@
 package statistics
 
 import breeze.linalg.DenseMatrix
-import breeze.stats.distributions.{FDistribution}
+import breeze.stats.distributions.FDistribution
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -131,13 +131,13 @@ class ANOVATable(regression: OLSRegression) {
     outString.toString()
   }
 
-  val summaryString: String = {
-    val headerString = "-\tdf\tSS\tMS\tF"
+  val summaryStrings: Array[String] = {
+    val headerString = "ANOVA table:\n-\tdf\tSS\tMS\tF"
     val rowStrings: Vector[String] = table.map(row => anovaRowToString(row))
-    (headerString +: rowStrings).mkString("\n").toString
+    (headerString +: rowStrings).toArray
   }
 
   def printTable(): Unit = {
-    println(summaryString)
+    summaryStrings.foreach(println)
   }
 }

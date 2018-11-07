@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SEMS-Spark_Prototype/SEMS-Spark_Prototype.iml" filepath="$PROJECT_DIR$/SEMS-Spark_Prototype/SEMS-Spark_Prototype.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SPAEML/SPAEML.iml" filepath="$PROJECT_DIR$/SPAEML/SPAEML.iml" />
     </modules>
   </component>
 </project>
