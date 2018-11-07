@@ -124,8 +124,6 @@ class SPAEMLTest {
                                         initial_collection,
                                         0.05
                                        )
-    reg.summaryStrings.foreach(println)
-
     assertEquals(Vector("x1"), reg.xColumnNames.toVector)
     assertEquals("x1", reg.xColumnNames.last)
 
