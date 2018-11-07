@@ -434,11 +434,13 @@ object SPAEML extends Serializable {
                     epistatic: Boolean,
                     shouldSerialize: Boolean
                    ) {
-
     val totalStartTime = System.nanoTime()
 
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDir)) {
-      throw new Error("Output directory already exists. Either remove the directory or output to a different directory.")
+      throw new Error("Output directory '" +
+                      outputDir +
+                      "' already exists. Either remove the directory or output to a different directory."
+      )
     }
 
     val snpData: FileData = {
@@ -469,7 +471,7 @@ object SPAEML extends Serializable {
     // Parallelize the original table into an RDD
     val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
 
-    val fullSnpRDD = {
+    val fullSnpRDD: rdd.RDD[(String, DenseVector[Double])] = {
       if (epistatic) {
         // Spread Vector of pairwise SNP_name combinations across cluster
         val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
@@ -491,15 +493,13 @@ object SPAEML extends Serializable {
     // The :_* unpacks the contents of the array as input to the hash set
     val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
 
-    // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
-    //   All SNPs start in the not_added category
-    val initCollections = new StepCollections(not_added = snpNames)
-
-    /*
-     *  For each phenotype, build a model, log and save the results
-     */
+    //  For each phenotype, build a model, log and save the results
     for (phenotype <- phenotypeNames) {
       val startTime = System.nanoTime()
+
+      // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
+      //   All SNPs start in the not_added category
+      val initCollections = new StepCollections(not_added = snpNames)
 
       // Build the model for the given phenotype
       val bestReg = performSteps(spark.sparkContext, fullSnpRDD, phenoBroadcast, phenotype, initCollections, threshold)

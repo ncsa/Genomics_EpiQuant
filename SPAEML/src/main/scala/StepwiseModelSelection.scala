@@ -102,7 +102,7 @@ object StepwiseModelSelection {
   
   def launch(args: Array[String]) {
     
-    val parsed = argParser.parse(args, InputConfig())
+    val parsed: Option[InputConfig] = argParser.parse(args, InputConfig())
     
     parsed match {
 
@@ -138,8 +138,8 @@ object StepwiseModelSelection {
           parsed.get.isOnAws,
           parsed.get.s3BucketName,
           parsed.get.threshold,
-          parsed.get.shouldSerialize,
-          parsed.get.epistatic
+          parsed.get.epistatic,
+          parsed.get.shouldSerialize
         )
 
       }
