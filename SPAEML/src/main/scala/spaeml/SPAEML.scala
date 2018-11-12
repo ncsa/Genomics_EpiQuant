@@ -76,7 +76,8 @@ object SPAEML extends Serializable {
     }
 
     val writer = fs.create(outputFilePath)
-    writer.writeChars(payload)
+
+    writer.writeUTF(payload)
     writer.close()
   }
 
