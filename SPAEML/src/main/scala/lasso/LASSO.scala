@@ -16,6 +16,17 @@ import spaeml.SPAEML.readHDFSFile
 
 object LASSO {
 
+  /**
+    * Runs LASSO to build a model for each phenotype and output to JSON files.
+    * @param spark The configured Spark session
+    * @param epiqInputFile The .epiq file for genotype input data.
+    * @param pedInputFile The .ped file for genotype input data, must be paired with .map input.
+    * @param mapInputFile The .map file for genotype input data, must be paried with .ped input.
+    * @param phenotypeInputFile The file for phenotype input data.
+    * @param outputDirectoryPath The output directory.
+    * @param isOnAws Flag indicating if running on AWS.
+    * @param s3BucketName The 3S bucket name for input and output files, if on AWS.
+    */
   def performLASSO(
                     spark: SparkSession,
                     epiqInputFile: String,
@@ -24,8 +35,7 @@ object LASSO {
                     phenotypeInputFile: String,
                     outputDirectoryPath: String,
                     isOnAws: Boolean,
-                    s3BucketName: String,
-                    shouldSerialize: Boolean): Unit = {
+                    s3BucketName: String): Unit = {
 
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
       EpiQuantLogger.error(
@@ -54,6 +64,13 @@ object LASSO {
     models.foreach(x => x.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x.phenotypeName + ".lasso"))
   }
 
+  /**
+    * Train LASSO models using Spark's MLLib.
+    * @param genotypeData The genotype input data as FileData
+    * @param phenotypeData The phenotype input data as FileData
+    * @param spark The configured Spark session
+    * @return A vector storing LinearRegressionModels for all phenotypes.
+    */
   def train(genotypeData: FileData, phenotypeData: FileData, spark: SparkSession): Vector[LinearRegressionModel] = {
 
     val output = Vector.newBuilder[LinearRegressionModel]
@@ -72,11 +89,18 @@ object LASSO {
     output.result()
   }
 
+  /**
+    * Create a RDD for LASSO input.
+    * @param geno The genotype input data.
+    * @param pheno The phenotype data (phenotype name, phenotype values for all samples)
+    * @param spark The configured Spark session
+    * @return A RDD of LabeledPoint consisting of the input data, ready to feed into LASSO.
+    */
   def createRDD(geno: FileData, pheno: (String, DenseVector[Double]), spark: SparkContext): RDD[LabeledPoint] = {
 
     val data = new ListBuffer[LabeledPoint]()
 
-    for ((sample, index) <- geno.sampleNames.zipWithIndex) {
+    for ((_, index) <- geno.sampleNames.zipWithIndex) {
 
       val phenoPoint = pheno._2(index)
       val snpPoints = geno.dataPairs.map(x => x._2(index))
@@ -84,7 +108,6 @@ object LASSO {
 
       data += labledPoint
     }
-
     spark.parallelize(data).cache()
   }
 

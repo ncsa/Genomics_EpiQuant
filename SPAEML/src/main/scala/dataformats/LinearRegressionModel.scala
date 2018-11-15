@@ -18,6 +18,14 @@ class LinearRegressionModel(
     this(phenotypeName, weights.map(_._1), weights, intercept)
   }
 
+  /**
+    * Serialize the model into JSON and save to a file.
+    * @param spark The configured Spark session
+    * @param isOnAws Flag indicating if running on AWS
+    * @param s3BucketName The S3 bucket name, if on AWS
+    * @param outputDir The output directory to store the file
+    * @param filename The filename
+    */
   def saveAsJSON(spark: SparkSession, isOnAws: Boolean, s3BucketName: String, outputDir: String, filename: String): Unit = {
 
     val json: JObject = ("phenotype" -> this.phenotypeName) ~ ("weights" -> this.weights) ~ ("intercept" -> this.intercept)

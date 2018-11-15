@@ -143,8 +143,7 @@ object StepwiseModelSelection {
             parsed.get.phenotypeInputFile,
             parsed.get.outputDirectoryPath,
             parsed.get.isOnAws,
-            parsed.get.s3BucketName,
-            parsed.get.shouldSerialize
+            parsed.get.s3BucketName
           )
         } else {
           SPAEML.performSPAEML(
