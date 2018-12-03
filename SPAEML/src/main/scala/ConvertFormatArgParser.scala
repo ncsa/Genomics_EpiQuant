@@ -10,7 +10,7 @@ case class Config(inputFiles: Seq[String] = Seq(),
                   delimiter: String = "\t"
                  )
 
-object ConvertFormat {
+object ConvertFormatArgParser {
 
   private val fileTypes = List("pedmap", "custom")
 

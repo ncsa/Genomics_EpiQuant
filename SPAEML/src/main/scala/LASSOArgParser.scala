@@ -1,8 +1,8 @@
-import spaeml._
+import lasso._
 import org.apache.spark.sql.SparkSession
 import loggers.EpiQuantLogger
 
-case class InputConfig(
+case class LASSOConfig(
                         epiqInputFile: String = "",
                         pedInputFile: String = "",
                         mapInputFile: String = "",
@@ -10,16 +10,13 @@ case class InputConfig(
                         outputDirectoryPath: String = "",
                         isOnAws: Boolean = false,
                         s3BucketName: String = "",
-                        threshold: Double = 0.05,
-                        shouldSerialize: Boolean = false,
-                        sparkMaster: String = "local",
-                        epistatic: Boolean = true
+                        sparkMaster: String = "local"
                       )
-                      
-object StepwiseModelSelection {
 
-  private val argParser = new scopt.OptionParser[InputConfig]("StepwiseModelSelection") {
-    head("StepwiseModelSelection")
+object LASSOArgParser {
+
+  private val argParser = new scopt.OptionParser[LASSOConfig]("LASSO") {
+    head("LASSO")
 
     note("Required Arguments\n------------------")
 
@@ -28,13 +25,13 @@ object StepwiseModelSelection {
       .valueName("<file>")
       .action( (x, c) => c.copy(phenotypeInputFile = x) )
       .text("Path to the phenotype input file")
-      
+
     opt[String]('o', "output")
       .required
       .valueName("<file>")
       .action( (x, c) => c.copy(outputDirectoryPath = x) )
       .text("Path to the output directory")
-      
+
     note("\nOptional Arguments\n------------------")
 
     opt[String]("epiq")
@@ -56,32 +53,16 @@ object StepwiseModelSelection {
       .action( (_, c) => c.copy(isOnAws = true) )
       .text("Set this flag to run on AWS")
 
-    opt[Unit]("serialize")
-      .action( (_, c) => c.copy(shouldSerialize = true) )
-      .text("Set this flag to serialize data, which is space-efficient but CPU-bound")
-
     opt[String]("bucket")
-        .valueName("<url>")
-        .action( (x, c) => c.copy(s3BucketName = x) )
-        .text("Path to the S3 Bucket storing input and output files")
-
-    opt[Double]("threshold")
-      .optional
-      .valueName("<number>")
-      .action( (x, c) => c.copy(threshold = x) )
-      .text("The p-value threshold for the backward and forward steps (default=0.05)")
+      .valueName("<url>")
+      .action( (x, c) => c.copy(s3BucketName = x) )
+      .text("Path to the S3 Bucket storing input and output files")
 
     opt[String]("master")
       .optional
       .valueName("<url>")
       .action( (x, c) => c.copy(sparkMaster = x) )
       .text("The master URL for Spark")
-
-    opt[Boolean]("epistatic")
-        .optional()
-        .valueName("<boolean>")
-        .action( (x, c) => c.copy(epistatic = x) )
-        .text("Include epistatic terms in computation (default=True)")
 
     checkConfig( c =>
       if (c.epiqInputFile.isEmpty && (c.pedInputFile.isEmpty || c.mapInputFile.isEmpty)) {
@@ -100,11 +81,11 @@ object StepwiseModelSelection {
       else success
     )
   }
-  
+
   def launch(args: Array[String]) {
-    
-    val parsed: Option[InputConfig] = argParser.parse(args, InputConfig())
-    
+
+    val parsed: Option[LASSOConfig] = argParser.parse(args, LASSOConfig())
+
     parsed match {
 
       // Received invalid or incomplete arguments
@@ -127,7 +108,8 @@ object StepwiseModelSelection {
         }
 
         spark.sparkContext.setLogLevel("ERROR")
-        SPAEML.performSPAEML(
+
+        LASSO.performLASSO(
           spark,
           parsed.get.epiqInputFile,
           parsed.get.pedInputFile,
@@ -135,13 +117,9 @@ object StepwiseModelSelection {
           parsed.get.phenotypeInputFile,
           parsed.get.outputDirectoryPath,
           parsed.get.isOnAws,
-          parsed.get.s3BucketName,
-          parsed.get.threshold,
-          parsed.get.epistatic,
-          parsed.get.shouldSerialize
+          parsed.get.s3BucketName
         )
-
       }
-    }  
+    }
   }
 }
