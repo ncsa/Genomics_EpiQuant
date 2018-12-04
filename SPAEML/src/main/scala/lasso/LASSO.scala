@@ -78,8 +78,6 @@ object LASSO {
 
     for (phenotype <- phenotypeData.dataPairs) {
 
-      val phenotype = phenotypeData.dataPairs(0)
-
       val rdd = createRDD(genotypeData, phenotype, spark.sparkContext)
       val model = LassoWithSGD.train(rdd, 100)
       val weights = genotypeData.dataNames zip model.weights.toArray

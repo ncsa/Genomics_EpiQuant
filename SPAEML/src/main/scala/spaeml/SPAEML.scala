@@ -395,7 +395,6 @@ object SPAEML extends Serializable {
                     s3BucketName: String,
                     threshold: Double,
                     epistatic: Boolean,
-                    runLasso: Boolean,
                     shouldSerialize: Boolean
                    ) {
     val totalStartTime = System.nanoTime()
@@ -432,7 +431,6 @@ object SPAEML extends Serializable {
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
     EpiQuantLogger.info("Created original variant broadcast table")
-
 
     val storageLevel = if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER else StorageLevel.MEMORY_AND_DISK
 
