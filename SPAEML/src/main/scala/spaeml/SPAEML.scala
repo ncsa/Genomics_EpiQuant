@@ -13,6 +13,7 @@ import org.apache.spark.storage.StorageLevel
 import dataformats.FileData
 import loggers.EpiQuantLogger
 import scala.annotation.tailrec
+import lasso.LASSO
 
 object SPAEML extends Serializable {
 
@@ -394,6 +395,7 @@ object SPAEML extends Serializable {
                     s3BucketName: String,
                     threshold: Double,
                     epistatic: Boolean,
+                    runLasso: Boolean,
                     shouldSerialize: Boolean
                    ) {
     val totalStartTime = System.nanoTime()
@@ -439,6 +441,8 @@ object SPAEML extends Serializable {
     val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
     EpiQuantLogger.info("Created original variant RDD")
 
+    // Lazily load LASSO model for future steps in case runLasso is set to true
+    lazy val lassoModels = LASSO.train(snpData, phenotypeData, spark)
 
     val fullSnpRDD: rdd.RDD[(String, DenseVector[Double])] = {
       if (epistatic) {
@@ -462,7 +466,6 @@ object SPAEML extends Serializable {
         singleSnpRDD.persist(storageLevel)
       }
     }
-
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
     EpiQuantLogger.debug("Broadcasting phenotype value lookup table")

@@ -9,6 +9,7 @@ import org.apache.spark.mllib.regression.{LabeledPoint, LassoWithSGD}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
+import scala.collection.mutable.Map
 
 import scala.collection.mutable.ListBuffer
 import spaeml.SPAEML
@@ -61,7 +62,7 @@ object LASSO {
     }
 
     val models = train(genotypeData, phenotypeData, spark)
-    models.foreach(x => x.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x.phenotypeName + ".lasso"))
+    models.foreach(x => x._2.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x._2.phenotypeName + ".lasso"))
   }
 
   /**
@@ -69,11 +70,11 @@ object LASSO {
     * @param genotypeData The genotype input data as FileData
     * @param phenotypeData The phenotype input data as FileData
     * @param spark The configured Spark session
-    * @return A vector storing LinearRegressionModels for all phenotypes.
+    * @return A map from phenotype names to resulting LinearRegressionModels
     */
-  def train(genotypeData: FileData, phenotypeData: FileData, spark: SparkSession): Vector[LinearRegressionModel] = {
+  def train(genotypeData: FileData, phenotypeData: FileData, spark: SparkSession): Map[String, LinearRegressionModel] = {
 
-    val output = Vector.newBuilder[LinearRegressionModel]
+    val output = Map[String, LinearRegressionModel]()
 
     for (phenotype <- phenotypeData.dataPairs) {
 
@@ -83,10 +84,10 @@ object LASSO {
       val model = LassoWithSGD.train(rdd, 100)
       val weights = genotypeData.dataNames zip model.weights.toArray
 
-      output += new LinearRegressionModel(phenotype._1, weights, model.intercept)
+      output += (phenotype._1 -> new LinearRegressionModel(phenotype._1, weights, model.intercept))
     }
 
-    output.result()
+    return output
   }
 
   /**
