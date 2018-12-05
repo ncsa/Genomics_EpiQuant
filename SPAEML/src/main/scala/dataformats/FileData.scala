@@ -26,4 +26,11 @@ class FileData(val sampleNames: Vector[String],
           ) {
      this(sampleNames, dataPairs, dataNames = dataPairs.map(_._1))
   }
+
+  def getFilteredFileData(SNPsToRemove: Vector[String]): FileData = {
+
+    val filteredDataPairs = dataPairs.filter(x => !SNPsToRemove.contains(x._1))
+    return new FileData(sampleNames, filteredDataPairs)
+  }
+
 }
