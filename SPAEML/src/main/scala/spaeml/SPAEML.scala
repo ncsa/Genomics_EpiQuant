@@ -451,7 +451,7 @@ object SPAEML extends Serializable {
 
       val startTime = System.nanoTime()
 
-      val filteredSnpData= if (runLasso) {
+      val filteredSnpData = if (runLasso) {
         val lassoModel = lassoModels(phenotype)
         snpData.getFilteredFileData(lassoModel.SNPsToRemove)
       } else {
