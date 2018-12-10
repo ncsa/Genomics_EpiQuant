@@ -404,9 +404,9 @@ object SPAEML extends Serializable {
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDir)) {
       EpiQuantLogger.error(
         "Output directory '" + outputDir +
-        "' already exists: Remove the directory or change the output directory location",
-        new Error
+        "' already exists: Remove the directory or change the output directory location"
       )
+      throw new Error("Output directory already exists")
     }
 
     val snpData: FileData = {
