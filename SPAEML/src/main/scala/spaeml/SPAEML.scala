@@ -425,7 +425,8 @@ object SPAEML extends Serializable {
     }
 
     if (phenotypeData.sampleNames != snpData.sampleNames) {
-      EpiQuantLogger.error("Sample order did not match between the SNP and Phenotype input files", new Error)
+      EpiQuantLogger.error("Sample order did not match between the SNP and Phenotype input files")
+      throw new Error("Sample mismatch between genotype and phenotype")
     }
 
     val storageLevel = if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER else StorageLevel.MEMORY_AND_DISK
