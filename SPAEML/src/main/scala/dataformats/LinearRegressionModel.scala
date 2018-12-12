@@ -25,7 +25,7 @@ class LinearRegressionModel(
   lazy val SNPsToKeep = weights.filter(_._2 != 0).map(_._1)
 
   override def toString(): String = {
-    "Phenotype: " + phenotypeName + "\n" + "SNPs to remove: " + SNPsToRemove.mkString(", ") + "\n" + "SNPs to keep: " + SNPsToKeep.mkString(", ") + "\n"
+    "Phenotype: " + phenotypeName + "\n" + "\tSNPs to remove: " + SNPsToRemove.mkString(", ") + "\n" + "\tSNPs to keep: " + SNPsToKeep.mkString(", ")
   }
 
   /**

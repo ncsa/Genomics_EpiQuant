@@ -454,6 +454,8 @@ object SPAEML extends Serializable {
 
       val filteredSnpData = if (runLasso) {
         val lassoModel = lassoModels(phenotype)
+        EpiQuantLogger.info("Run LASSO to reduce search space.")
+        EpiQuantLogger.info("Removing the following SNPs: " + lassoModel.SNPsToRemove.mkString(", "))
         snpData.getFilteredFileData(lassoModel.SNPsToRemove)
       } else {
         snpData
