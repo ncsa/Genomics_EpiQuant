@@ -13,6 +13,7 @@ import org.apache.spark.storage.StorageLevel
 import dataformats.FileData
 import loggers.EpiQuantLogger
 import scala.annotation.tailrec
+import lasso.LASSO
 
 object SPAEML extends Serializable {
 
@@ -394,16 +395,18 @@ object SPAEML extends Serializable {
                     s3BucketName: String,
                     threshold: Double,
                     epistatic: Boolean,
+                    runLasso: Boolean,
                     shouldSerialize: Boolean
                    ) {
+
     val totalStartTime = System.nanoTime()
 
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDir)) {
       EpiQuantLogger.error(
         "Output directory '" + outputDir +
-        "' already exists: Remove the directory or change the output directory location",
-        new Error
+        "' already exists: Remove the directory or change the output directory location"
       )
+      throw new Error("Output directory already exists")
     }
 
     val snpData: FileData = {
@@ -422,47 +425,20 @@ object SPAEML extends Serializable {
     }
 
     if (phenotypeData.sampleNames != snpData.sampleNames) {
-      EpiQuantLogger.error("Sample order did not match between the SNP and Phenotype input files", new Error)
+      EpiQuantLogger.error("Sample order did not match between the SNP and Phenotype input files")
+      throw new Error("Sample mismatch between genotype and phenotype")
     }
+
+    val storageLevel = if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER else StorageLevel.MEMORY_AND_DISK
+
+    // Lazily load LASSO model for future steps in case runLasso is set to true
+    lazy val lassoModels = LASSO.train(snpData, phenotypeData, spark)
 
     EpiQuantLogger.debug("Creating original variant broadcast table")
     // Broadcast original SNP map where (SNP_name -> [SNP_values])
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
     EpiQuantLogger.info("Created original variant broadcast table")
-
-
-    val storageLevel = if (shouldSerialize) StorageLevel.MEMORY_AND_DISK_SER else StorageLevel.MEMORY_AND_DISK
-
-    EpiQuantLogger.debug("Creating original variant RDD")
-    // Parallelize the original table into an RDD
-    val singleSnpRDD = spark.sparkContext.parallelize(snpData.dataPairs)
-    EpiQuantLogger.info("Created original variant RDD")
-
-
-    val fullSnpRDD: rdd.RDD[(String, DenseVector[Double])] = {
-      if (epistatic) {
-        // Spread Vector of pairwise SNP_name combinations across cluster
-        val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(snpData.dataNames)
-        EpiQuantLogger.debug("Created pairwise variant-name combinations")
-
-        EpiQuantLogger.debug("Creating pairwise variant RDD")
-        val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
-        EpiQuantLogger.info("Created pairwise variant RDD")
-
-        // Create the pairwise combinations across the cluster
-        val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-        EpiQuantLogger.debug("Spread pairwise variant-name combinations across cluster")
-
-        EpiQuantLogger.debug("Combining pairwise and original variant RDDs")
-        val combinedRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
-        EpiQuantLogger.info("Combined pairwise and original variant RDDs")
-        combinedRDD
-      } else {
-        singleSnpRDD.persist(storageLevel)
-      }
-    }
-
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
     EpiQuantLogger.debug("Broadcasting phenotype value lookup table")
@@ -471,12 +447,50 @@ object SPAEML extends Serializable {
 
     val phenotypeNames = phenotypeData.dataNames
 
-    // The :_* unpacks the contents of the array as input to the hash set
-    val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
-
     //  For each phenotype, build a model, log and save the results
     for (phenotype <- phenotypeNames) {
+
       val startTime = System.nanoTime()
+
+      val filteredSnpData = if (runLasso) {
+        val lassoModel = lassoModels(phenotype)
+        EpiQuantLogger.info("Run LASSO to reduce search space.")
+        EpiQuantLogger.info("Removing the following SNPs: " + lassoModel.SNPsToRemove.mkString(", "))
+        snpData.getFilteredFileData(lassoModel.SNPsToRemove)
+      } else {
+        snpData
+      }
+
+      EpiQuantLogger.debug("Creating original variant RDD")
+      // Parallelize the original table into an RDD
+      val singleSnpRDD = spark.sparkContext.parallelize(filteredSnpData.dataPairs)
+      EpiQuantLogger.info("Created original variant RDD")
+
+      val fullSnpRDD: rdd.RDD[(String, DenseVector[Double])] = {
+        if (epistatic) {
+          // Spread Vector of pairwise SNP_name combinations across cluster
+          val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(filteredSnpData.dataNames)
+          EpiQuantLogger.debug("Created pairwise variant-name combinations")
+
+          EpiQuantLogger.debug("Creating pairwise variant RDD")
+          val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
+          EpiQuantLogger.info("Created pairwise variant RDD")
+
+          // Create the pairwise combinations across the cluster
+          val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
+          EpiQuantLogger.debug("Spread pairwise variant-name combinations across cluster")
+
+          EpiQuantLogger.debug("Combining pairwise and original variant RDDs")
+          val combinedRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
+          EpiQuantLogger.info("Combined pairwise and original variant RDDs")
+          combinedRDD
+        } else {
+          singleSnpRDD.persist(storageLevel)
+        }
+      }
+
+      // The :_* unpacks the contents of the array as input to the hash set
+      val snpNames: mutable.HashSet[String] = mutable.HashSet(fullSnpRDD.keys.collect(): _*)
 
       // Create the initial set of collections (the class that keeps track of which SNPs are in and out of the model)
       //   All SNPs start in the not_added category

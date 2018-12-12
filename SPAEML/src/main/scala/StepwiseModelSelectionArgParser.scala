@@ -13,7 +13,8 @@ case class InputConfig(
                         threshold: Double = 0.05,
                         shouldSerialize: Boolean = false,
                         sparkMaster: String = "local",
-                        epistatic: Boolean = true
+                        epistatic: Boolean = true,
+                        runLasso: Boolean = false
                       )
                       
 object StepwiseModelSelectionArgParser {
@@ -83,6 +84,12 @@ object StepwiseModelSelectionArgParser {
         .action( (x, c) => c.copy(epistatic = x) )
         .text("Include epistatic terms in computation (default=True)")
 
+    opt[Boolean]("lasso")
+      .optional()
+      .valueName("<boolean>")
+      .action( (x, c) => c.copy(runLasso = x) )
+      .text("Run LASSO to reduce search space (default=False)")
+
     checkConfig( c =>
       if (c.epiqInputFile.isEmpty && (c.pedInputFile.isEmpty || c.mapInputFile.isEmpty)) {
         failure("Need genotype input file: either specify one .epiq file or both .ped and .map files.")
@@ -139,6 +146,7 @@ object StepwiseModelSelectionArgParser {
           parsed.get.s3BucketName,
           parsed.get.threshold,
           parsed.get.epistatic,
+          parsed.get.runLasso,
           parsed.get.shouldSerialize
         )
       }
