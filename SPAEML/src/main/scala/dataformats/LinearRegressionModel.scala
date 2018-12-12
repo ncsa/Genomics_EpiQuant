@@ -24,6 +24,10 @@ class LinearRegressionModel(
   // The names of the SNPs with non-zero coefficients
   lazy val SNPsToKeep = weights.filter(_._2 != 0).map(_._1)
 
+  override def toString(): String = {
+    "Phenotype: " + phenotypeName + "\n" + "SNPs to remove: " + SNPsToRemove.mkString(", ") + "\n" + "SNPs to keep: " + SNPsToKeep.mkString(", ") + "\n"
+  }
+
   /**
     * Serialize the model into JSON and save to a file.
     * @param spark The configured Spark session

@@ -62,6 +62,8 @@ object LASSO {
     }
 
     val models = train(genotypeData, phenotypeData, spark)
+
+    models.foreach(x => EpiQuantLogger.debug(x.toString()))
     models.foreach(x => x._2.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x._2.phenotypeName + ".lasso"))
   }
 
@@ -78,11 +80,15 @@ object LASSO {
 
     for (phenotype <- phenotypeData.dataPairs) {
 
+      EpiQuantLogger.info("Running LASSO on phenotype " + phenotype._1)
+
       val rdd = createRDD(genotypeData, phenotype, spark.sparkContext)
       val model = LassoWithSGD.train(rdd, 100)
       val weights = genotypeData.dataNames zip model.weights.toArray
 
       output += (phenotype._1 -> new LinearRegressionModel(phenotype._1, weights, model.intercept))
+
+      EpiQuantLogger.info("Finished running LASSO on phenotype " + phenotype._1)
     }
 
     return output
