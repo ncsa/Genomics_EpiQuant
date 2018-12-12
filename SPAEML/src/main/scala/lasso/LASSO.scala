@@ -1,6 +1,6 @@
 package lasso
 
-import breeze.linalg.DenseVector
+import breeze.linalg.{DenseMatrix, DenseVector}
 import converters.PedMapParser
 import dataformats.{FileData, LinearRegressionModel}
 import loggers.EpiQuantLogger
@@ -9,11 +9,12 @@ import org.apache.spark.mllib.regression.{LabeledPoint, LassoWithSGD}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import scala.collection.mutable.Map
 
+import scala.collection.mutable.Map
 import scala.collection.mutable.ListBuffer
 import spaeml.SPAEML
 import spaeml.SPAEML.readHDFSFile
+import statistics.{ANOVATable, OLSRegression}
 
 object LASSO {
 
@@ -41,9 +42,9 @@ object LASSO {
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
       EpiQuantLogger.error(
         "Output directory '" + outputDirectoryPath +
-          "' already exists: Remove the directory or change the output directory location",
-        new Error
+          "' already exists: Remove the directory or change the output directory location"
       )
+      throw new Error("Output directory already exists")
     }
 
     val genotypeData: FileData = {
@@ -63,7 +64,8 @@ object LASSO {
 
     val models = train(genotypeData, phenotypeData, spark)
 
-    models.foreach(x => x._2.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x._2.phenotypeName + ".lasso"))
+    models.foreach(x => x._2.saveAsJSON(spark, isOnAws, s3BucketName, outputDirectoryPath, x._2.phenotypeName + ".json"))
+    produceAndSaveANOVATables(genotypeData, phenotypeData, models, spark, outputDirectoryPath, isOnAws, s3BucketName)
   }
 
   /**
@@ -115,6 +117,54 @@ object LASSO {
       data += labledPoint
     }
     spark.parallelize(data).cache()
+  }
+
+  def produceAndSaveANOVATables(
+                                genotypeData: FileData,
+                                phenotypeData: FileData,
+                                models: Map[String, LinearRegressionModel],
+                                spark: SparkSession,
+                                outputDir: String,
+                                isOnAws: Boolean,
+                                s3BucketName: String): Unit = {
+
+    EpiQuantLogger.info("Logging and saving LASSO results")
+
+    for (phenotype <- phenotypeData.dataPairs) {
+
+      val table = produceANOVATable(genotypeData, phenotype, models(phenotype._1))
+      EpiQuantLogger.info(table.summaryStrings.mkString("\n"))
+      SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype._1 + ".summary", table.summaryStrings.mkString("\n"))
+    }
+  }
+
+  /**
+    * Create a ANOVA table from given data and LASSO linear regression model.
+    * Run OLS regression once on all SNPs with non-zero coefficients and produce ANOVA table.
+    * @param genotypeData: the full genotype data
+    * @param phenotypeData: the full phenotype data
+    * @param model: the linear regression model produced by LASSO
+    * @return: the resulting ANOVA table
+    */
+  def produceANOVATable(
+                         genotype: FileData,
+                         phenotype: (String, DenseVector[Double]),
+                         model: LinearRegressionModel): ANOVATable = {
+
+    val filteredGenotypeData = genotype.getFilteredFileData(model.SNPsToRemove)
+
+    val xColumnNames = filteredGenotypeData.dataNames.toArray
+    val yColumnName = phenotype._1
+
+    val numRows = filteredGenotypeData.sampleNames.length
+    val numCols = filteredGenotypeData.dataNames.length
+    val xValues = filteredGenotypeData.dataPairs.map(_._2.toArray).toArray.flatten
+    val Xs = new DenseMatrix(numRows, numCols, xValues)
+
+    val Y = phenotype._2
+
+    val regression = new OLSRegression(xColumnNames, yColumnName, Xs, Y)
+    new ANOVATable(regression)
   }
 
 }
