@@ -22,8 +22,7 @@ class Table(val table: Vector[Vector[Any]]) {
     for (i <- 0 until input.length - 1) {
       string = string + input(i).toString + "\t"
     }
-    string = string + input.last.toString + "\n" 
-    string
+    string + input.last.toString + "\n"
   }
   
   def saveTableAsTSV(file: File) {

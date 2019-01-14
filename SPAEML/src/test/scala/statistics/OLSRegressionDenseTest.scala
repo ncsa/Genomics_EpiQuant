@@ -43,8 +43,8 @@ object OLSRegressionDenseTest {
                         21, 22, 23, 24, 25, 26, 27, 28, 29, 30
                        )
 
-    simpleReg = new OLSRegressionDense(Array("X1"), "Y", matrixSingleX, Y)
-    multiReg = new OLSRegressionDense(Array("X1", "X2", "X3"), "Y", matrixMultiX, Y)
+    simpleReg = new OLSRegression(Array("X1"), "Y", matrixSingleX, Y)
+    multiReg = new OLSRegression(Array("X1", "X2", "X3"), "Y", matrixMultiX, Y)
 
   }
 }

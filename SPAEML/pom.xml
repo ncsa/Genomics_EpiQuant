@@ -8,7 +8,7 @@
   <build>
     <sourceDirectory>src/main/scala</sourceDirectory>
     <testSourceDirectory>src/test/scala</testSourceDirectory>
-      
+
     <plugins>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
@@ -68,13 +68,13 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.11</artifactId>
-      <version>2.1.0</version>
+      <version>2.2.0</version>
     </dependency>
     
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_2.11</artifactId>
-      <version>2.1.0</version>
+      <version>2.2.0</version>
     </dependency>
     
     <dependency>
@@ -96,6 +96,22 @@
       <artifactId>all</artifactId>
       <version>1.1.2</version>
       <type>pom</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>2.11.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>2.11.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-mllib_2.11</artifactId>
+        <version>2.0.2</version>
     </dependency>
 
   </dependencies>

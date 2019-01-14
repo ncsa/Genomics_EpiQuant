@@ -25,6 +25,14 @@ Example: `./aws/deploy_to_s3.sh -b genomics-epiquant-beta --j target/SPAEML-0.0.
 
 Example: `./aws/run_in_emr.sh -b genomics-epiquant-beta -j SPAEML-0.0.1-jar-with-dependencies.jar -g 10.Subset.n=300.epiq -p Simulated.Data.1.Reps.Herit.0.92_n=300.epiq -o output`
 
+## Logging
+
+In SPAEML/conf, there is a log4j.properties file that controls logging. One must pass the following to spark-submit to enable logging:
+
+`--driver-java-options "-Dlog4j.configuration=file:/full/path/to/Genomics_EpiQuant/SPAEML/conf/log4j.properties"`
+
+Note: this has only been tested in local mode
+
 ## Background
 
 Computing the two-way interactions between terms when detecting epistasis can become computationally and memory intensive very quickly. However, because the SEMS process can be easily implemented in an iterative map-reduce style, it naturally lends itself to the Apache Spark platform.

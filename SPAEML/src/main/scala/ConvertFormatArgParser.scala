@@ -1,15 +1,16 @@
 import java.io.File
 import converters._
+import loggers.EpiQuantLogger
 
 case class Config(inputFiles: Seq[String] = Seq(),
-                  outputFile: String =  ".",
-                  inputType: String = "Custom",
+                  outputFile: String = ".",
+                  inputType: String = "custom",
                   deleteColumns: Seq[Int] = Seq(),
-                  transpose: Boolean = false,
+                  columnsAreVariants: Boolean = false,
                   delimiter: String = "\t"
                  )
 
-object ConvertFormat {
+object ConvertFormatArgParser {
 
   private val fileTypes = List("pedmap", "custom")
 
@@ -54,16 +55,16 @@ object ConvertFormat {
       }
     }
 
-    opt[Boolean]('t', "transpose")
+    opt[Boolean]("columnsAreVariants")
       .optional
       .valueName("{ default = false }")
-      .text("Transpose the data")
-      .action( (x, c) => c.copy(transpose = x) )
+      .text("(custom-only) Variants are stored in columns")
+      .action( (x, c) => c.copy(columnsAreVariants = x) )
 
     opt[Seq[Int]]("deleteColumns")
       .optional
       .valueName("<Int>,<Int>,...")
-      .text("Comma separated list of columns to delete; Count from 0")
+      .text("(custom-only) Comma separated list of columns to delete; Count from 0")
       .action( (x, c) => c.copy(deleteColumns = x) )
 
     checkConfig( c =>
@@ -72,14 +73,14 @@ object ConvertFormat {
     )
   }
 
-  def launch(args: Array[String]) = {
+  def launch(args: Array[String]): Unit = {
 
     val parsed = argParser.parse(args, Config())
 
     parsed match {
 
       // Handle a case where there is something wrong with the input arguments
-      case None => System.err.println("\nError: Invalid/incomplete arguments")
+      case None => EpiQuantLogger.error("Invalid/incomplete arguments", new Error)
 
       // If there is a valid set of arguments presented
       case Some(config) => {
@@ -88,34 +89,32 @@ object ConvertFormat {
         parsed.get.inputType.toLowerCase match {
           case "custom" => {
 
-            val inputFile = new File(parsed.get.inputFiles(0))
-            val outputFile = new File(parsed.get.outputFile)
+            new CustomFileParser(parsed.get.inputFiles(0),
+                                 parsed.get.delimiter,
+                                 parsed.get.deleteColumns,
+                                 parsed.get.columnsAreVariants
+                                ).writeEpiqFile(parsed.get.outputFile)
 
-            new CustomFileParser(
-              inputFile,
-              parsed.get.delimiter,
-              parsed.get.deleteColumns,
-              parsed.get.transpose
-            ).saveParsedFile(outputFile)
-            println("Conversion successful: new file can be found at: " + outputFile.getAbsolutePath)
+            EpiQuantLogger.info(
+              "Conversion successful: new file can be found at: " + new File(parsed.get.outputFile).getAbsolutePath
+            )
           }
           case "pedmap" => {
+            val pedmapErrorMessage = "For PedMap parser, please specify a .ped file and a .map file"
 
-            if (parsed.get.inputFiles.size != 2) {
-              throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
-            }
+            if (parsed.get.inputFiles.size != 2) EpiQuantLogger.error(pedmapErrorMessage ,new Error)
 
             val ped = parsed.get.inputFiles filter (x => x.takeRight(4) == ".ped")
             val map = parsed.get.inputFiles filter (x => x.takeRight(4) == ".map")
 
-            if (ped.size != 1 || map.size != 1) {
-              throw new Error("Error: for PedMap parser, please specify a .ped file and a .map file")
-            }
+            if (ped.size != 1 || map.size != 1) EpiQuantLogger.error(pedmapErrorMessage, new Error)
 
-            new PedMapParser(map(0), ped(0)).parseAndOutputToFile(parsed.get.outputFile)
-            println("Conversion successful: new file can be found at: " + parsed.get.outputFile)
+            new PedMapParser(map(0), ped(0)).writeEpiqFile(parsed.get.outputFile)
+            EpiQuantLogger.info(
+              "Conversion successful: new file can be found at: " +  new File(parsed.get.outputFile).getAbsolutePath
+            )
           }
-          case _ => throw new Error("Error: Invalid Input Type")
+          case other => EpiQuantLogger.error("Invalid input type: " + other, new Error)
         }
       }
     }

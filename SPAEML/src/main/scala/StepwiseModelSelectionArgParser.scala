@@ -1,5 +1,6 @@
 import spaeml._
 import org.apache.spark.sql.SparkSession
+import loggers.EpiQuantLogger
 
 case class InputConfig(
                         epiqInputFile: String = "",
@@ -12,10 +13,11 @@ case class InputConfig(
                         threshold: Double = 0.05,
                         shouldSerialize: Boolean = false,
                         sparkMaster: String = "local",
-                        epistatic: Boolean = true
+                        epistatic: Boolean = true,
+                        runLasso: Boolean = false
                       )
                       
-object StepwiseModelSelection {
+object StepwiseModelSelectionArgParser {
 
   private val argParser = new scopt.OptionParser[InputConfig]("StepwiseModelSelection") {
     head("StepwiseModelSelection")
@@ -82,6 +84,12 @@ object StepwiseModelSelection {
         .action( (x, c) => c.copy(epistatic = x) )
         .text("Include epistatic terms in computation (default=True)")
 
+    opt[Boolean]("lasso")
+      .optional()
+      .valueName("<boolean>")
+      .action( (x, c) => c.copy(runLasso = x) )
+      .text("Run LASSO to reduce search space (default=False)")
+
     checkConfig( c =>
       if (c.epiqInputFile.isEmpty && (c.pedInputFile.isEmpty || c.mapInputFile.isEmpty)) {
         failure("Need genotype input file: either specify one .epiq file or both .ped and .map files.")
@@ -102,14 +110,12 @@ object StepwiseModelSelection {
   
   def launch(args: Array[String]) {
     
-    val parsed = argParser.parse(args, InputConfig())
+    val parsed: Option[InputConfig] = argParser.parse(args, InputConfig())
     
     parsed match {
 
       // Received invalid or incomplete arguments
-      case None => {
-        System.err.println("\nError: Invalid/incomplete arguments")
-      }
+      case None => EpiQuantLogger.error("Invalid/incomplete arguments", new Error)
 
       // Received valid arguments
       case Some(_) => {
@@ -128,7 +134,8 @@ object StepwiseModelSelection {
         }
 
         spark.sparkContext.setLogLevel("ERROR")
-        SPAEMLDense.performSPAEML(
+
+        SPAEML.performSPAEML(
           spark,
           parsed.get.epiqInputFile,
           parsed.get.pedInputFile,
@@ -138,10 +145,10 @@ object StepwiseModelSelection {
           parsed.get.isOnAws,
           parsed.get.s3BucketName,
           parsed.get.threshold,
-          parsed.get.shouldSerialize,
-          parsed.get.epistatic
+          parsed.get.epistatic,
+          parsed.get.runLasso,
+          parsed.get.shouldSerialize
         )
-
       }
     }  
   }
