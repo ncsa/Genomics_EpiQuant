@@ -11,7 +11,7 @@ mvn clean
 mvn install (running this without mvn clean will compile only changed files)
 ```
 
-## Running Locally
+## Usage
 
 In target, the jar will be present. Use `spark-submit --master local` to run the program locally with Spark. 
 
@@ -54,6 +54,7 @@ Optional Arguments
 
 You can run SPAEML with either a .epiq file or a pair of .ped and .map files as genotype input. You can optionaly turn off the epistatic steps by setting --epistatic to false. You can also optionally run a LASSO step to reduce the search space before running SPAEML by setting --lasso to true.
 
+
 Flags for LASSO:
 ```
 Required Arguments
@@ -94,6 +95,8 @@ Optional Arguments
 ```
 
 This is used for converting either a TSV file or a map/ped (PLINK) files into our .epiq custom format.
+
+Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require different arguments, the first argument ConvertFormat needs is the --inputType flag. After this is entered, the options for each specific type of parser will be given.
 
 ## Deploying & Running on AWS
 
@@ -160,79 +163,6 @@ Recursive call:
   else, return the current model
 ```
 <img src=./media/SEMS-algorithm.png width="900">
-
-
-## Installation
-
-### Git clone
-
-`git clone https://github.com/ncsa/NCSA-Genomics_EpiQuant_SEMS_Spark`
-
-### Build 
-
-This package is built with Maven
-
-From the directory that contains the pom.xml file, execute the following command:
-
-`mvn package`
-
-The jar with dependencies included will be created within the newly created `target` directory
-
-## Usage
-
-### Convert Format
-
-Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require different arguments, the first argument ConvertFormat
-  needs is the --inputType flag. After this is entered, the options for each specific type of parser will be given.
-
-#### ConvertFormat Alone
-```
-ConvertFormat
-Usage: ConvertFormat [options]
-
-  --inputType <String>  Input type: { Custom | Plink | HapMap }
-```
-##### ConvertFormat --inputType Custom
-```
-Usage: Custom [options]
-
-Required Arguments
-------------------
-  -i, --input <file>       Path of the file to convert
-  -o, --output <file>      Path where the output file will be placed
-
-Optional Arguments
-------------------
-  -d, --delimiter { default = <tab> }
-                           Set what delimiter to use
-  -t, --transpose { default = false }
-                           Transpose the data
-  --deleteColumns <Int>,<Int>,...
-                           Comma separated list of columns to delete; Count from 0
-```
-**More types of parsers will be added at a future date**
-
-### StepwiseModelSelection (or SEMS)
-```
-Usage: StepwiseModelSelection [options]
-
-Required Arguments
-------------------
-  --spark-master <string>  
-  -G, --genotypeInput <file>
-                           Path to the genotype file
-  -P, --phenotypeInput <file>
-                           Path to the phenotype file
-  -o, --output <file>      Path to where the output file will be placed
-
-Optional Arguments
-------------------
-  --threshold <number>     The p-value threshold for the backward and forward steps: Defaults to 0.05
-  --spark-log-level WARN, INFO, DEBUG, etc.
-                           Set sparks log verbosity: Defaults to INFO
-  --serialization true or false
-                           Will data be serialized. Defaults to false; if true, need less memory, but runs slower
-```
 
 ## Validation
 
