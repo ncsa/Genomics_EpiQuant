@@ -29,6 +29,9 @@ spark-submit --master local target/SPAEML-0.0.1-jar-with-dependencies.jar LASSO 
 ```
 spark-submit --master local target/SPAEML-0.0.1-jar-with-dependencies.jar ConvertFormat -i src/test/resources/Genotypes/10.Subset.n=300.tsv -o output/10.Subset.n=300.epiq --inputType custom
 ```
+#### SPAEML
+
+You can run SPAEML with either a .epiq file or a pair of .ped and .map files as genotype input. You can optionaly turn off the epistatic steps by setting --epistatic to false. You can also optionally run a LASSO step to reduce the search space before running SPAEML by setting --lasso to true.
 
 Flags for SPAEML:
 ```
@@ -52,8 +55,9 @@ Optional Arguments
   --lasso <boolean>        Run LASSO to reduce search space (default=False)
 ```
 
-You can run SPAEML with either a .epiq file or a pair of .ped and .map files as genotype input. You can optionaly turn off the epistatic steps by setting --epistatic to false. You can also optionally run a LASSO step to reduce the search space before running SPAEML by setting --lasso to true.
+#### LASSO
 
+This is used for running LASSO alone.
 
 Flags for LASSO:
 ```
@@ -73,7 +77,11 @@ Optional Arguments
   --master <url>           The master URL for Spark
 ```
 
-This is used for running LASSO alone.
+#### Format Converter
+
+This is used for converting either a TSV file or a map/ped (PLINK) files into our .epiq custom format.
+
+Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require different arguments, the first argument ConvertFormat needs is the --inputType flag. After this is entered, the options for each specific type of parser will be given.
 
 Flags for format converter:
 ```
@@ -93,10 +101,6 @@ Optional Arguments
   --deleteColumns <Int>,<Int>,...
                            (custom-only) Comma separated list of columns to delete; Count from 0
 ```
-
-This is used for converting either a TSV file or a map/ped (PLINK) files into our .epiq custom format.
-
-Since different formats (PLINK's map/ped, HapMap, custom, etc.) will require different arguments, the first argument ConvertFormat needs is the --inputType flag. After this is entered, the options for each specific type of parser will be given.
 
 ## Deploying & Running on AWS
 
