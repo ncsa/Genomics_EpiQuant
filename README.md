@@ -103,7 +103,7 @@ Example: `./aws/deploy_to_s3.sh -b genomics-epiquant-beta --j target/SPAEML-0.0.
 
 2. Create EMR cluster and run steps by running `aws/run_in_emr.sh`.
 
-Example: `./aws/run_in_emr.sh -b genomics-epiquant-beta -j SPAEML-0.0.1-jar-with-dependencies.jar -g 10.Subset.n=300.epiq -p Simulated.Data.1.Reps.Herit.0.92_n=300.epiq -o output`
+Example: `./aws/run_in_emr.sh -b genomics-epiquant-beta -j SPAEML-0.0.1-jar-with-dependencies.jar -g 10.Subset.n=300.epiq -p Simulated.Data.1.Reps.Herit.0.92_n=300.epiq -o output -l true`
 
 ## Logging
 
