@@ -8,12 +8,92 @@ cd into the directory that contains the pom.xml file
 
 ```
 mvn clean
-mvn compile
-mvn install
+mvn install (running this without mvn clean will compile only changed files)
 ```
 
-In target, the jar will be present.
-Run with java -jar <jar location>
+## Running Locally
+
+In target, the jar will be present. Use `spark-submit --master local` to run the program locally with Spark. 
+
+For example:
+
+- To run SPAEML:
+```
+spark-submit --master local target/SPAEML-0.0.1-jar-with-dependencies.jar StepwiseModelSelection --epiq src/test/resources/Genotypes/10.Subset.n=300.epiq -P src/test/resources/Phenotypes/Simulated.Data.1.Reps.Herit.0.92_n=300.epiq -o output
+```
+- To run LASSO:
+```
+spark-submit --master local target/SPAEML-0.0.1-jar-with-dependencies.jar LASSO -P src/test/resources/Phenotypes/Simulated.Data.1.Reps.Herit.0.92_n=300.epiq --epiq src/test/resources/Genotypes/10.Subset.n=300.epiq -o output
+```
+- To run format converter:
+```
+spark-submit --master local target/SPAEML-0.0.1-jar-with-dependencies.jar ConvertFormat -i src/test/resources/Genotypes/10.Subset.n=300.tsv -o output/10.Subset.n=300.epiq --inputType custom
+```
+
+Flags for SPAEML:
+```
+Required Arguments
+------------------
+  -P, --phenotypeInput <file>
+                           Path to the phenotype input file
+  -o, --output <file>      Path to the output directory
+
+Optional Arguments
+------------------
+  --epiq <file>            Path to the .epiq genotype input file
+  --ped <file>             Path to the .ped genotype input file
+  --map <file>             Path to the .map genotype input file
+  --aws                    Set this flag to run on AWS
+  --serialize              Set this flag to serialize data, which is space-efficient but CPU-bound
+  --bucket <url>           Path to the S3 Bucket storing input and output files
+  --threshold <number>     The p-value threshold for the backward and forward steps (default=0.05)
+  --master <url>           The master URL for Spark
+  --epistatic <boolean>    Include epistatic terms in computation (default=True)
+  --lasso <boolean>        Run LASSO to reduce search space (default=False)
+```
+
+You can run SPAEML with either a .epiq file or a pair of .ped and .map files as genotype input. You can optionaly turn off the epistatic steps by setting --epistatic to false. You can also optionally run a LASSO step to reduce the search space before running SPAEML by setting --lasso to true.
+
+Flags for LASSO:
+```
+Required Arguments
+------------------
+  -P, --phenotypeInput <file>
+                           Path to the phenotype input file
+  -o, --output <file>      Path to the output directory
+
+Optional Arguments
+------------------
+  --epiq <file>            Path to the .epiq genotype input file
+  --ped <file>             Path to the .ped genotype input file
+  --map <file>             Path to the .map genotype input file
+  --aws                    Set this flag to run on AWS
+  --bucket <url>           Path to the S3 Bucket storing input and output files
+  --master <url>           The master URL for Spark
+```
+
+This is used for running LASSO alone.
+
+Flags for format converter:
+```
+Required Arguments
+------------------
+  -i, --inputs <String>,<String>
+                           Paths of the files to convert
+  -o, --output <String>    Path where the output file will be placed
+  --inputType <String>     The format of the input file { pedmap | custom }
+
+Optional Arguments
+------------------
+  -d, --delimiter { default = <tab> }
+                           Set what delimiter to use
+  --columnsAreVariants { default = false }
+                           (custom-only) Variants are stored in columns
+  --deleteColumns <Int>,<Int>,...
+                           (custom-only) Comma separated list of columns to delete; Count from 0
+```
+
+This is used for converting either a TSV file or a map/ped (PLINK) files into our .epiq custom format.
 
 ## Deploying & Running on AWS
 
