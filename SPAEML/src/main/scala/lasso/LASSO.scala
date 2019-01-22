@@ -3,6 +3,7 @@ package lasso
 import breeze.linalg.{DenseMatrix, DenseVector}
 import converters.PedMapParser
 import dataformats.{FileData, LinearRegressionModel}
+import helpers.FileUtility
 import loggers.EpiQuantLogger
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.{LabeledPoint, LassoWithSGD}
@@ -13,7 +14,6 @@ import org.apache.spark.sql.SparkSession
 import scala.collection.mutable.Map
 import scala.collection.mutable.ListBuffer
 import spaeml.SPAEML
-import spaeml.SPAEML.readHDFSFile
 import statistics.{ANOVATable, OLSRegression}
 
 object LASSO {
@@ -39,7 +39,7 @@ object LASSO {
                     isOnAws: Boolean,
                     s3BucketName: String): Unit = {
 
-    if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
+    if (FileUtility.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
       EpiQuantLogger.error(
         "Output directory '" + outputDirectoryPath +
           "' already exists: Remove the directory or change the output directory location"
@@ -51,15 +51,15 @@ object LASSO {
       if (epiqInputFile.isEmpty) {
         new PedMapParser(mapInputFile, pedInputFile).fileData
       } else if (isOnAws) {
-        readHDFSFile(SPAEML.getFullS3Path(s3BucketName, epiqInputFile), spark.sparkContext)
+        FileUtility.readHDFSFile(FileUtility.getFullS3Path(s3BucketName, epiqInputFile), spark.sparkContext)
       } else {
-        readHDFSFile(epiqInputFile, spark.sparkContext)
+        FileUtility.readHDFSFile(epiqInputFile, spark.sparkContext)
       }
     }
 
     val phenotypeData = {
-      if (isOnAws) readHDFSFile(SPAEML.getFullS3Path(s3BucketName, phenotypeInputFile), spark.sparkContext)
-      else readHDFSFile(phenotypeInputFile, spark.sparkContext)
+      if (isOnAws) FileUtility.readHDFSFile(FileUtility.getFullS3Path(s3BucketName, phenotypeInputFile), spark.sparkContext)
+      else FileUtility.readHDFSFile(phenotypeInputFile, spark.sparkContext)
     }
 
     val models = train(genotypeData, phenotypeData, spark)
@@ -134,7 +134,7 @@ object LASSO {
 
       val table = produceANOVATable(genotypeData, phenotype, models(phenotype._1))
       EpiQuantLogger.info(table.summaryStrings.mkString("\n"))
-      SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype._1 + ".summary", table.summaryStrings.mkString("\n"))
+      FileUtility.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype._1 + ".summary", table.summaryStrings.mkString("\n"))
     }
   }
 

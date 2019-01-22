@@ -6,7 +6,7 @@ import org.apache.spark.sql.SparkSession
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import spaeml.SPAEML.getFullS3Path
+import helpers.FileUtility
 
 class LinearRegressionModel(
                            val phenotypeName: String,
@@ -44,7 +44,7 @@ class LinearRegressionModel(
     val fs: FileSystem = if (isOnAws) FileSystem.get(new URI("s3://" + s3BucketName), conf) else FileSystem.get(conf)
 
     val outputFilePath = {
-      if (isOnAws) new Path(getFullS3Path(s3BucketName, new Path(outputDir, filename).toString))
+      if (isOnAws) new Path(FileUtility.getFullS3Path(s3BucketName, new Path(outputDir, filename).toString))
       else new Path(outputDir, filename)
     }
 
