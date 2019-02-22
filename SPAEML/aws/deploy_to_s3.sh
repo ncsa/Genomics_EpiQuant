@@ -72,13 +72,13 @@ fi
 JAR_FILE_NAME=$(basename $JAR_FILE_PATH)
 
 # Set expiration date to one month from now
-EXPIRATION_DATE=$(date -v +1m +%FT%TZ)
+# EXPIRATION_DATE=$(date -v +1m +%FT%TZ)
 
 echo "Uploading files to S3 bucket $BUCKET_NAME..."
-echo "NOTE: All expiration date is set to $EXPIRATION_DATE"
+# echo "NOTE: All expiration date is set to $EXPIRATION_DATE"
 echo "Uploading JAR file at $JAR_FILE_PATH..."
 
-aws s3 cp $JAR_FILE_PATH s3://$BUCKET_NAME/$JAR_FILE_NAME --expires $EXPIRATION_DATE
+aws s3 cp $JAR_FILE_PATH s3://$BUCKET_NAME/$JAR_FILE_NAME # --expires $EXPIRATION_DATE
 
 if [ "$1" == "--input" ]; then
     shift
@@ -87,7 +87,7 @@ if [ "$1" == "--input" ]; then
     do
         echo "Uploading input file at $input_file..."
         INPUT_FILE_NAME=$(basename $input_file)
-        aws s3 cp $input_file s3://$BUCKET_NAME/$INPUT_FILE_NAME --expires $EXPIRATION_DATE
+        aws s3 cp $input_file s3://$BUCKET_NAME/$INPUT_FILE_NAME # --expires $EXPIRATION_DATE
     done
 fi
 
