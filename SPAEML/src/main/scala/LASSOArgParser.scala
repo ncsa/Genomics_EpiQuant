@@ -1,6 +1,5 @@
 import lasso._
 import org.apache.spark.sql.SparkSession
-import loggers.EpiQuantLogger
 
 case class LASSOConfig(
                         epiqInputFile: String = "",
@@ -89,7 +88,7 @@ object LASSOArgParser {
     parsed match {
 
       // Received invalid or incomplete arguments
-      case None => EpiQuantLogger.error("Invalid/incomplete arguments", new Error)
+      case None => println("Invalid/incomplete arguments", new Error)
 
       // Received valid arguments
       case Some(_) => {

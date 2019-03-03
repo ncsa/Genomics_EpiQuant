@@ -4,7 +4,6 @@ import breeze.linalg.{DenseMatrix, DenseVector, diag, pinv}
 import breeze.stats.distributions.StudentsT
 import breeze.stats.distributions.FDistribution
 import breeze.numerics.log
-import loggers.EpiQuantLogger
 
 class OLSRegression(val xColumnNames: Array[String],
                     val yColumnName: String,
@@ -212,7 +211,7 @@ class OLSRegression(val xColumnNames: Array[String],
 
   /** Logs a summary of the regression, in a format similar to R's summary */
   def logSummary(): Unit = {
-    EpiQuantLogger.info(summaryStrings.mkString("\n\t"))
+    println(summaryStrings.mkString("\n\t"))
   }
 }
 

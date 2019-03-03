@@ -11,7 +11,6 @@ import converters.PedMapParser
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.storage.StorageLevel
 import dataformats.FileData
-import loggers.EpiQuantLogger
 import scala.annotation.tailrec
 import lasso.LASSO
 
@@ -157,7 +156,7 @@ object SPAEML extends Serializable {
                          prevBestModel: OLSRegression = null,
                          iterations: Int = 1
                          ): Option[OLSRegression] = {
-    EpiQuantLogger.info("SPAEML model-building iteration number: " + iterations.toString)
+    println("SPAEML model-building iteration number: " + iterations.toString)
 
     /*
      *  LOCAL FUNCTIONS
@@ -255,7 +254,7 @@ object SPAEML extends Serializable {
     // If the p-value of the newest term does not meet the threshold, return the prevBestModel
     if (getNewestTermsPValue(bestRegression) >= threshold) {
       if (prevBestModel == null) {
-        EpiQuantLogger.warn(
+        println(
           "No variants could be added to the model with the " + phenoName +
             " phenotype: the threshold of " + threshold + " may be too strict"
         )
@@ -294,7 +293,7 @@ object SPAEML extends Serializable {
          *   (the items in the skipped category were skipped on this round, so we must create a final model with those
          *   terms excluded)
          */
-        EpiQuantLogger.warn("There are no more variants that could be added to the model: " +
+        println("There are no more variants that could be added to the model: " +
           "the threshold of " + threshold + " may be too lenient"
         )
         if (collections.getSkipped.isEmpty) return Option(bestRegression)
@@ -402,7 +401,7 @@ object SPAEML extends Serializable {
     val totalStartTime = System.nanoTime()
 
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDir)) {
-      EpiQuantLogger.error(
+      println(
         "Output directory '" + outputDir +
         "' already exists: Remove the directory or change the output directory location"
       )
@@ -425,7 +424,7 @@ object SPAEML extends Serializable {
     }
 
     if (phenotypeData.sampleNames != snpData.sampleNames) {
-      EpiQuantLogger.error("Sample order did not match between the SNP and Phenotype input files")
+      println("Sample order did not match between the SNP and Phenotype input files")
       throw new Error("Sample mismatch between genotype and phenotype")
     }
 
@@ -434,16 +433,16 @@ object SPAEML extends Serializable {
     // Lazily load LASSO model for future steps in case runLasso is set to true
     lazy val lassoModels = LASSO.train(snpData, phenotypeData, spark)
 
-    EpiQuantLogger.debug("Creating original variant broadcast table")
+    println("Creating original variant broadcast table")
     // Broadcast original SNP map where (SNP_name -> [SNP_values])
     val broadSnpTable: Broadcast[Map[String, DenseVector[Double]]] =
       spark.sparkContext.broadcast(snpData.dataPairs.toMap)
-    EpiQuantLogger.info("Created original variant broadcast table")
+    println("Created original variant broadcast table")
 
     // Broadcast Phenotype map where (phenotype_name -> [values])
-    EpiQuantLogger.debug("Broadcasting phenotype value lookup table")
+    println("Broadcasting phenotype value lookup table")
     val phenoBroadcast = spark.sparkContext.broadcast(phenotypeData.dataPairs.toMap)
-    EpiQuantLogger.info("Broadcasted phenotype value lookup table")
+    println("Broadcasted phenotype value lookup table")
 
     val phenotypeNames = phenotypeData.dataNames
 
@@ -454,35 +453,35 @@ object SPAEML extends Serializable {
 
       val filteredSnpData = if (runLasso) {
         val lassoModel = lassoModels(phenotype)
-        EpiQuantLogger.info("Run LASSO to reduce search space.")
-        EpiQuantLogger.info("Removing the following SNPs: " + lassoModel.SNPsToRemove.mkString(", "))
+        println("Run LASSO to reduce search space.")
+        println("Removing the following SNPs: " + lassoModel.SNPsToRemove.mkString(", "))
         snpData.getFilteredFileData(lassoModel.SNPsToRemove)
       } else {
         snpData
       }
 
-      EpiQuantLogger.debug("Creating original variant RDD")
+      println("Creating original variant RDD")
       // Parallelize the original table into an RDD
       val singleSnpRDD = spark.sparkContext.parallelize(filteredSnpData.dataPairs)
-      EpiQuantLogger.info("Created original variant RDD")
+      println("Created original variant RDD")
 
       val fullSnpRDD: rdd.RDD[(String, DenseVector[Double])] = {
         if (epistatic) {
           // Spread Vector of pairwise SNP_name combinations across cluster
           val pairwiseCombinations: Seq[(String, String)] = createPairwiseList(filteredSnpData.dataNames)
-          EpiQuantLogger.debug("Created pairwise variant-name combinations")
+          println("Created pairwise variant-name combinations")
 
-          EpiQuantLogger.debug("Creating pairwise variant RDD")
+          println("Creating pairwise variant RDD")
           val pairRDD = spark.sparkContext.parallelize(pairwiseCombinations)
-          EpiQuantLogger.info("Created pairwise variant RDD")
+          println("Created pairwise variant RDD")
 
           // Create the pairwise combinations across the cluster
           val pairedSnpRDD = pairRDD.map(createPairwiseColumn(_, broadSnpTable))
-          EpiQuantLogger.debug("Spread pairwise variant-name combinations across cluster")
+          println("Spread pairwise variant-name combinations across cluster")
 
-          EpiQuantLogger.debug("Combining pairwise and original variant RDDs")
+          println("Combining pairwise and original variant RDDs")
           val combinedRDD = (singleSnpRDD ++ pairedSnpRDD).persist(storageLevel)
-          EpiQuantLogger.info("Combined pairwise and original variant RDDs")
+          println("Combined pairwise and original variant RDDs")
           combinedRDD
         } else {
           singleSnpRDD.persist(storageLevel)
@@ -523,7 +522,7 @@ object SPAEML extends Serializable {
         Vector("Genotype File(s): " + genotypeFileNames, "Phenotype File: " + phenotypeFileName, modelOutputString)
 
       // Log the final model built
-      output.foreach(EpiQuantLogger.info(_))
+      output.foreach(println(_))
 
       // Save to file
       SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype + ".summary", output.mkString("\n"))

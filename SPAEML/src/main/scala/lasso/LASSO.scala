@@ -3,7 +3,6 @@ package lasso
 import breeze.linalg.{DenseMatrix, DenseVector}
 import converters.PedMapParser
 import dataformats.{FileData, LinearRegressionModel}
-import loggers.EpiQuantLogger
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.{LabeledPoint, LassoWithSGD}
 import org.apache.spark.mllib.linalg.Vectors
@@ -40,7 +39,7 @@ object LASSO {
                     s3BucketName: String): Unit = {
 
     if (SPAEML.outputDirectoryAlreadyExists(spark, isOnAws, s3BucketName, outputDirectoryPath)) {
-      EpiQuantLogger.error(
+      println(
         "Output directory '" + outputDirectoryPath +
           "' already exists: Remove the directory or change the output directory location"
       )
@@ -81,7 +80,7 @@ object LASSO {
 
     for (phenotype <- phenotypeData.dataPairs) {
 
-      EpiQuantLogger.info("Running LASSO on phenotype " + phenotype._1)
+      println("Running LASSO on phenotype " + phenotype._1)
 
       val rdd = createRDD(genotypeData, phenotype, spark.sparkContext)
       val model = LassoWithSGD.train(rdd, 100)
@@ -90,8 +89,8 @@ object LASSO {
       val resultModel = new LinearRegressionModel(phenotype._1, weights, model.intercept)
       output += (phenotype._1 -> resultModel)
 
-      EpiQuantLogger.info("Finished running LASSO on phenotype " + phenotype._1)
-      EpiQuantLogger.info(resultModel)
+      println("Finished running LASSO on phenotype " + phenotype._1)
+      println(resultModel)
     }
 
     return output
@@ -128,12 +127,12 @@ object LASSO {
                                 isOnAws: Boolean,
                                 s3BucketName: String): Unit = {
 
-    EpiQuantLogger.info("Logging and saving LASSO results")
+    println("Logging and saving LASSO results")
 
     for (phenotype <- phenotypeData.dataPairs) {
 
       val table = produceANOVATable(genotypeData, phenotype, models(phenotype._1))
-      EpiQuantLogger.info(table.summaryStrings.mkString("\n"))
+      println(table.summaryStrings.mkString("\n"))
       SPAEML.writeToOutputFile(spark, isOnAws, s3BucketName, outputDir, phenotype._1 + ".summary", table.summaryStrings.mkString("\n"))
     }
   }

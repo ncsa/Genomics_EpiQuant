@@ -1,6 +1,5 @@
 import java.io.File
 import converters._
-import loggers.EpiQuantLogger
 
 case class Config(inputFiles: Seq[String] = Seq(),
                   outputFile: String = ".",
@@ -80,7 +79,7 @@ object ConvertFormatArgParser {
     parsed match {
 
       // Handle a case where there is something wrong with the input arguments
-      case None => EpiQuantLogger.error("Invalid/incomplete arguments", new Error)
+      case None => println("Invalid/incomplete arguments", new Error)
 
       // If there is a valid set of arguments presented
       case Some(config) => {
@@ -95,26 +94,26 @@ object ConvertFormatArgParser {
                                  parsed.get.columnsAreVariants
                                 ).writeEpiqFile(parsed.get.outputFile)
 
-            EpiQuantLogger.info(
+            println(
               "Conversion successful: new file can be found at: " + new File(parsed.get.outputFile).getAbsolutePath
             )
           }
           case "pedmap" => {
             val pedmapErrorMessage = "For PedMap parser, please specify a .ped file and a .map file"
 
-            if (parsed.get.inputFiles.size != 2) EpiQuantLogger.error(pedmapErrorMessage ,new Error)
+            if (parsed.get.inputFiles.size != 2) println(pedmapErrorMessage ,new Error)
 
             val ped = parsed.get.inputFiles filter (x => x.takeRight(4) == ".ped")
             val map = parsed.get.inputFiles filter (x => x.takeRight(4) == ".map")
 
-            if (ped.size != 1 || map.size != 1) EpiQuantLogger.error(pedmapErrorMessage, new Error)
+            if (ped.size != 1 || map.size != 1) println(pedmapErrorMessage, new Error)
 
             new PedMapParser(map(0), ped(0)).writeEpiqFile(parsed.get.outputFile)
-            EpiQuantLogger.info(
+            println(
               "Conversion successful: new file can be found at: " +  new File(parsed.get.outputFile).getAbsolutePath
             )
           }
-          case other => EpiQuantLogger.error("Invalid input type: " + other, new Error)
+          case other => println("Invalid input type: " + other, new Error)
         }
       }
     }
