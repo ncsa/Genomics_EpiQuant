@@ -127,7 +127,6 @@ object StepwiseModelSelectionArgParser {
         } else {
           SparkSession
             .builder
-            .master(parsed.get.sparkMaster)
             .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
             .getOrCreate
         }
