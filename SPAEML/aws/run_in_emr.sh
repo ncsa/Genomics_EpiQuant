@@ -17,7 +17,7 @@ usage() {
     echo "      --c <instance-count (integer)>   to specify number of EC2 instances (default=3)"
     echo "      --t <instance-type (string)>   to specify type of EC2 instances (default=m4.large)"
     exit 1
-}     
+}
 
 SUBNET_ID="subnet-3a15e677"
 CLUSTER_NAME="genomics-epiquant-cluster"
@@ -70,23 +70,21 @@ echo "--------------------------------------------------------------------"
 
 echo "Creating EMR cluster..."
 
-if aws emr create-cluster                       \
-    --name $CLUSTER_NAME                        \
-    --release-label $EMR_RELEASE                \
-    --applications Name=SPARK                   \
-    --ec2-attributes KeyName=$EC2_KEY_PAIR      \
-    --instance-type $INSTANCE_TYPE              \
-    --instance-count $INSTANCE_COUNT            \
-    --auto-terminate                            \
-    --log-uri s3://genomics-epiquant-emr-logs   \
-    --use-default-roles                         \
-    --enable-debugging                          \
-    --ec2-attributes SubnetId=$SUBNET_ID        \
+if aws emr create-cluster                                       \
+    --name $CLUSTER_NAME                                        \
+    --release-label $EMR_RELEASE                                \
+    --applications Name=SPARK                                   \
+    --ec2-attributes KeyName=$EC2_KEY_PAIR,SubnetId=$SUBNET_ID  \
+    --instance-type $INSTANCE_TYPE                              \
+    --instance-count $INSTANCE_COUNT                            \
+    --auto-terminate                                            \
+    --log-uri s3://genomics-epiquant-emr-logs                   \
+    --use-default-roles                                         \
+    --enable-debugging                                          \
     --steps Type=CUSTOM_JAR,Name="Spark Program",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","Main","s3://$BUCKET_NAME/$JAR_FILE","StepwiseModelSelection","--epiq","$GENOTYPE_FILE","-P","$PHENOTYPE_FILE","-o","$OUTPUT_FILE","--aws","--bucket","$BUCKET_NAME","--lasso","$RUN_LASSO"];
 then
     echo "--------------------------------------------------------------------"
-    echo "Done!"
-else
+
     echo "--------------------------------------------------------------------"
     echo "Failed to create cluster!"
 fi
