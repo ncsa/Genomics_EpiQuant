@@ -180,3 +180,11 @@ and are automatically conducted when building with the `mvn package` command.
 Statistical validation of the output is a complicated task and is currently being done with simulated data.
 
 This validation is still in progress
+
+### Performance Profiling
+
+To analyze the performance of the application and to improve poorly performing parts of the code we used performance profilers. Yourkit Java Profiler was used to profile the code. The tool provides real-time resource utilization statistics. CPU usage graph showing total, kernel and garbage collector times is always available. There are various profiling modes that can be used for tracing, sampling and call counting. Tracing is very useful for our use since it give how long did a particular method run and how many times was the method called. CPU Usage, memory utilization such Heap memory, Non-Heap memory usage can be viewed in realtime. A snapshot of the job can be obtained during runtime and can be used to analyze the resource utilization.
+
+YourKit supports open source projects with innovative and intelligent tools for monitoring and profiling Java and .NET applications. YourKit is the creator of <a href="https://www.yourkit.com/java/profiler/">YourKit Java Profiler</a>, <a href="https://www.yourkit.com/.net/profiler/">YourKit .NET Profiler</a>  and <a href="https://www.yourkit.com/youmonitor/">YourKit YouMonitor</a>.
+
+![alt text](https://www.yourkit.com/images/yklogo.png)
